@@ -79,7 +79,10 @@ async function runVerification() {
     // 4. Verify Revision Model & Pointer Integrity
     console.log('\n[Test Group 3: Article Revision Model & Content Stability]');
     const publishedArticle = await prisma.article.findFirst({
-      where: { status: ArticleStatus.PUBLISHED },
+      where: {
+        status: ArticleStatus.PUBLISHED,
+        revisions: { some: { status: ArticleStatus.DRAFT } },
+      },
       include: { revisions: true, publishedRevision: true },
     });
 
