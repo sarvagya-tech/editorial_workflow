@@ -1,5 +1,6 @@
-// Prisma schema file
-// Waiting for your schema definition
+// Prisma Schema for Editorial Workflow Management System
+// Target: PostgreSQL (Neon / Standard Postgres)
+// Runtime: Node.js (JavaScript ES Modules)
 
 generator client {
   provider = "prisma-client-js"
@@ -8,4 +9,234 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------
+// ENUMS
+// ----------------------------------------------------
+
+enum Role {
+  WRITER
+  EDITOR
+}
+
+enum ArticleStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+}
+
+enum TimelineEventType {
+  CREATED
+  STATUS_CHANGED
+  CONTENT_UPDATED
+  REVISION_OPENED
+  REVISION_PUBLISHED
+  COMMENT_ADDED
+  SCHEDULED
+  UNPUBLISHED
+  ALERT_DISMISSED
+}
+
+// ----------------------------------------------------
+// MODELS
+// ----------------------------------------------------
+
+/// System user accounts with strict role-based access control.
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         Role      @default(WRITER)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relationships
+  ownedSections       Section[]           @relation("SectionOwner")
+  sectionAssignments  SectionAssignment[] @relation("WriterAssignments")
+  createdAssignments  SectionAssignment[] @relation("EditorAssigned")
+  authoredArticles    Article[]           @relation("ArticleAuthor")
+  authoredRevisions   ArticleRevision[]   @relation("RevisionAuthor")
+  timelineEvents      TimelineEvent[]     @relation("ActorTimelineEvents")
+  comments            ArticleComment[]    @relation("CommentAuthor")
+  alertDismissals     AlertDismissal[]    @relation("DismissedByEditor")
+
+  @@map("users")
+}
+
+/// Newsroom editorial desks/sections (e.g., Tech, Politics, Culture).
+/// Sections can be archived without deleting historical articles.
+model Section {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  description   String?   @db.Text
+  isArchived    Boolean   @default(false) @map("is_archived")
+  ownerEditorId String    @map("owner_editor_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relationships
+  ownerEditor User                @relation("SectionOwner", fields: [ownerEditorId], references: [id], onDelete: Restrict)
+  assignments SectionAssignment[]
+  articles    Article[]
+
+  @@index([isArchived])
+  @@index([ownerEditorId])
+  @@map("sections")
+}
+
+/// Explicit many-to-many join model between Sections and Writers.
+/// Records which editor authorized the assignment.
+model SectionAssignment {
+  id           String   @id @default(cuid())
+  sectionId    String   @map("section_id")
+  writerId     String   @map("writer_id")
+  assignedById String   @map("assigned_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relationships
+  section    Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  writer     User    @relation("WriterAssignments", fields: [writerId], references: [id], onDelete: Cascade)
+  assignedBy User    @relation("EditorAssigned", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@unique([sectionId, writerId])
+  @@index([writerId])
+  @@index([sectionId])
+  @@map("section_assignments")
+}
+
+/// Core editorial entity.
+/// Holds live lifecycle status, working content, publication schedule, and pointers to revisions.
+model Article {
+  id                  String        @id @default(cuid())
+  title               String        @db.VarChar(255)
+  body                String        @db.Text
+  status              ArticleStatus @default(DRAFT)
+  sectionId           String        @map("section_id")
+  authorId            String        @map("author_id")
+  
+  // Publication timestamps & scheduling
+  publishAt           DateTime?     @map("publish_at")
+  publishedAt         DateTime?     @map("published_at")
+  
+  // Schedule sequence generation: increments every time article is newly scheduled.
+  // Ties alert dismissals specifically to this scheduling occurrence.
+  scheduleSequence    Int           @default(0) @map("schedule_sequence")
+
+  // Pointer to currently published revision (null until first publication)
+  publishedRevisionId String?       @unique @map("published_revision_id")
+
+  // Optimistic concurrency control lock
+  version             Int           @default(1)
+
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+
+  // Relationships
+  section           Section           @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  author            User              @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  publishedRevision ArticleRevision?  @relation("CurrentPublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
+  revisions         ArticleRevision[] @relation("ArticleRevisions")
+  timelineEvents    TimelineEvent[]
+  comments          ArticleComment[]
+  alertDismissals   AlertDismissal[]
+
+  // Indexes for high-frequency queries
+  @@index([sectionId, status])
+  @@index([authorId, status])
+  @@index([status, publishAt])
+  @@index([updatedAt(sort: Desc)])
+  @@index([publishedAt(sort: Desc)])
+  @@map("articles")
+}
+
+/// Immutable historical versions and proposed draft revisions.
+/// When an article is published, a new revision starts its own lifecycle.
+model ArticleRevision {
+  id             String        @id @default(cuid())
+  articleId      String        @map("article_id")
+  revisionNumber Int           @map("revision_number")
+  title          String        @db.VarChar(255)
+  body           String        @db.Text
+  status         ArticleStatus @default(DRAFT)
+  authorId       String        @map("author_id")
+  publishedAt    DateTime?     @map("published_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  // Relationships
+  article                 Article          @relation("ArticleRevisions", fields: [articleId], references: [id], onDelete: Cascade)
+  author                  User             @relation("RevisionAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  livePublishedForArticle Article?         @relation("CurrentPublishedRevision")
+  timelineEvents          TimelineEvent[]
+  comments                ArticleComment[]
+
+  @@unique([articleId, revisionNumber])
+  @@index([articleId, status])
+  @@map("article_revisions")
+}
+
+/// Append-only, tamper-proof audit trail for the entire lifecycle of an article.
+/// Enforced as immutable via database trigger.
+model TimelineEvent {
+  id          String            @id @default(cuid())
+  articleId   String            @map("article_id")
+  actorId     String?           @map("actor_id")
+  actorName   String            @map("actor_name") // Snapshot of actor name for historical permanence
+  eventType   TimelineEventType @map("event_type")
+  oldStatus   ArticleStatus?    @map("old_status")
+  newStatus   ArticleStatus?    @map("new_status")
+  revisionId  String?           @map("revision_id")
+  description String            @db.Text
+  metadata    Json?             @db.JsonB
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  // Relationships
+  article  Article          @relation(fields: [articleId], references: [id], onDelete: Restrict)
+  actor    User?            @relation("ActorTimelineEvents", fields: [actorId], references: [id], onDelete: SetNull)
+  revision ArticleRevision? @relation(fields: [revisionId], references: [id], onDelete: SetNull)
+
+  @@index([articleId, createdAt(sort: Asc)])
+  @@index([eventType])
+  @@map("timeline_events")
+}
+
+/// Editorial comments left on articles (or tied to a specific revision).
+model ArticleComment {
+  id         String   @id @default(cuid())
+  articleId  String   @map("article_id")
+  revisionId String?  @map("revision_id")
+  authorId   String   @map("author_id")
+  content    String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relationships
+  article  Article          @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  revision ArticleRevision? @relation(fields: [revisionId], references: [id], onDelete: SetNull)
+  author   User             @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([articleId, createdAt(sort: Desc)])
+  @@map("article_comments")
+}
+
+/// Tracks dismissals of overdue publication alerts.
+/// Tied to a specific `scheduleSequence` so rescheduling an article naturally reactivates alerts.
+model AlertDismissal {
+  id               String   @id @default(cuid())
+  articleId        String   @map("article_id")
+  scheduleSequence Int      @map("schedule_sequence")
+  dismissedById    String   @map("dismissed_by_id")
+  dismissedAt      DateTime @default(now()) @map("dismissed_at")
+
+  // Relationships
+  article     Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  dismissedBy User    @relation("DismissedByEditor", fields: [dismissedById], references: [id], onDelete: Restrict)
+
+  @@unique([articleId, scheduleSequence])
+  @@index([articleId])
+  @@map("alert_dismissals")
 }
