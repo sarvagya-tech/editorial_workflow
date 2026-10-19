@@ -60,3 +60,27 @@ This log documents the pivotal architecture and data modeling decisions made for
 - **Rejected:** Allowing writers to enumerate all staff members assigned to a desk.
 - **Why:** Internal newsroom staffing assignments, special investigative desk attachments, and contractor assignments should not be broadly enumeratable across staff without editorial clearance. Editors retain full visibility into the entire roster.
 
+---
+
+## Decision 8: Rejection of Hard Deletion on Articles (Permanent Editorial Record)
+
+- **Chose:** Explicitly omitting hard DELETE endpoints on articles (`DELETE /api/articles/:id` returns `HTTP 405 Method Not Allowed`).
+- **Rejected:** Supporting `DELETE /api/articles/:id` with cascading deletes.
+- **Why:** In journalistic and newsroom operations, published stories, drafts under legal review, and editor corrections form an indelible institutional record. Hard-deleting an article would orphan or destroy historical timeline events, comments, and revision snapshots, violating Goal 9 ("History you cannot rewrite").
+
+---
+
+## Decision 9: Zero-Disclosure on Restricted Articles for Writers
+
+- **Chose:** Returning **HTTP 404 Not Found** when a writer requests an article belonging to an unassigned section or another writer's restricted draft.
+- **Rejected:** Returning HTTP 403 Forbidden.
+- **Why:** Returning 403 confirms the presence of confidential or embargoed investigative pieces in the newsroom. Returning 404 preserves zero-knowledge isolation.
+
+---
+
+## Decision 10: Revision Snapshots vs. Direct In-Place Content Modification
+
+- **Chose:** Enforcing that once an article is `PUBLISHED`, its content can never be modified through a generic `PATCH /api/articles/:id`. Instead, the author opens a new revision snapshot (`POST /api/articles/:id/revisions`).
+- **Rejected:** Allowing live in-place edits on published articles.
+- **Why:** Goal 4 demands: *"Once Published, an article's content cannot be edited directly — the writer opens a new revision instead, which starts its own path at Draft and replaces the current content only once that revision itself reaches Published."* This prevents stealth corrections and maintains an untampered canonical record of what the public saw.
+

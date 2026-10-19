@@ -7,6 +7,7 @@ import { authenticate, requireEditor, requireWriter } from './middleware/auth.js
 // Route imports
 import authRoutes from './routes/auth.routes.js';
 import sectionRoutes from './routes/section.routes.js';
+import articleRoutes from './routes/article.routes.js';
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.get('/api/health', (req, res) => {
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
+app.use('/api/articles', articleRoutes);
 
 // Role authorization verification endpoints (used by test suites)
 app.get('/api/test/editor-only', authenticate, requireEditor, (req, res) => {
