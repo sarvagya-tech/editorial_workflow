@@ -1,16 +1,19 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import { config } from './config/index.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { authenticate, requireEditor, requireWriter } from './middleware/auth.js';
 
-dotenv.config();
+// Route imports
+import authRoutes from './routes/auth.routes.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Middlewares
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-// Basic health check
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -19,8 +22,27 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`[Editorial API] Server running on http://localhost:${PORT}`);
+// Mount Routes
+app.use('/api/auth', authRoutes);
+
+// Role authorization verification endpoints (used by test suites)
+app.get('/api/test/editor-only', authenticate, requireEditor, (req, res) => {
+  res.json({ access: 'granted', role: req.user.role, user: req.user.name });
 });
+
+app.get('/api/test/writer-only', authenticate, requireWriter, (req, res) => {
+  res.json({ access: 'granted', role: req.user.role, user: req.user.name });
+});
+
+// Centralized error handler
+app.use(errorHandler);
+
+// Only listen if run directly (allows importing in tests)
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = config.port;
+  app.listen(PORT, () => {
+    console.log(`[Editorial API] Server running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;
