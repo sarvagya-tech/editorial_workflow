@@ -43,3 +43,20 @@ This log documents the pivotal architecture and data modeling decisions made for
 - **Chose:** **Node.js with JavaScript (ES Modules, `"type": "module"`)** and **React JSX with Vite**.
 - **Rejected:** Full TypeScript compilation with `tsc` build pipelines.
 - **Why:** The project priorities emphasize clean database architecture, state machine correctness, and immediate developer clarity. Using pure JavaScript with Prisma removes the build friction of duplicate TypeScript interface declarations and build-step transpilations, while Prisma Client still provides full autocomplete and runtime validation.
+
+---
+
+## Decision 6: Writer Section Non-Disclosure Policy (404 Not Found vs. 403 Forbidden)
+
+- **Chose:** Returning **HTTP 404 Not Found** when a writer requests a section ID they are not assigned to (`GET /api/sections/:id`).
+- **Rejected:** Returning HTTP 403 Forbidden.
+- **Why:** Returning 403 reveals the existence of an internal or embargoed editorial desk simply because a valid ID was supplied. Returning 404 adheres to the zero-disclosure principle, preventing malicious or curious enumeration of unassigned sections.
+
+---
+
+## Decision 7: Writer Assignment Roster Privacy
+
+- **Chose:** Scoping `/api/sections/:id/assignments` so that writers only see their own assignment entry for the section.
+- **Rejected:** Allowing writers to enumerate all staff members assigned to a desk.
+- **Why:** Internal newsroom staffing assignments, special investigative desk attachments, and contractor assignments should not be broadly enumeratable across staff without editorial clearance. Editors retain full visibility into the entire roster.
+

@@ -33,3 +33,15 @@ export function validateString(value, fieldName, minLength = 1, maxLength = 255)
   }
   return trimmed;
 }
+
+export function validateOptionalString(value, fieldName, maxLength = 1000) {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'string') {
+    throw new AppError(`Field '${fieldName}' must be a string.`, 400);
+  }
+  const trimmed = value.trim();
+  if (trimmed.length > maxLength) {
+    throw new AppError(`Field '${fieldName}' cannot exceed ${maxLength} characters.`, 400);
+  }
+  return trimmed;
+}
