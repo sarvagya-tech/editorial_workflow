@@ -1,4 +1,5 @@
 import { prisma } from '../prisma.js';
+import { getOverdueAlerts } from './alert.service.js';
 
 /**
  * Computes the Monday 00:00:00.000Z start of the week and Sunday 23:59:59.999Z end of the week in UTC.
@@ -223,13 +224,18 @@ export async function getDashboardMetrics({ user, referenceDate = new Date() }) 
     })
   );
 
+  // 7. Active Overdue Alerts
+  const overdueData = await getOverdueAlerts({ user, now: referenceDate });
+
   return {
     summary: {
       inReview,
       scheduledThisWeek,
       publishedThisWeek,
       openDrafts,
+      overdueAlerts: overdueData.total,
     },
+    overdueAlerts: overdueData.alerts,
     byStatus,
     bySection,
     weeklyPublications,

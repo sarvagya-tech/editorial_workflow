@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, requireEditor } from '../middleware/auth.js';
 import * as articleService from '../services/article.service.js';
 import * as workflowService from '../services/workflow.service.js';
+import * as alertService from '../services/alert.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 const router = Router();
@@ -276,6 +277,26 @@ router.post('/:id/unpublish', async (req, res, next) => {
   }
 });
 
+/**
+ * POST /api/articles/:id/alerts/dismiss
+ * Dismiss overdue publication alert for the article and its current scheduleSequence.
+ */
+router.post('/:id/alerts/dismiss', requireEditor, async (req, res, next) => {
+  try {
+    const result = await alertService.dismissOverdueAlert({
+      articleId: req.params.id,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ----------------------------------------------------
 // REVISION ENDPOINTS
 // ----------------------------------------------------
@@ -336,6 +357,30 @@ router.post('/:id/revisions', async (req, res, next) => {
       success: true,
       message: 'New revision opened successfully',
       data: revision,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ----------------------------------------------------
+// ALERT DISMISSAL ENDPOINT
+// ----------------------------------------------------
+
+/**
+ * POST /api/articles/:id/alerts/dismiss
+ * Dismiss overdue alert for the specified article and current scheduling occurrence.
+ */
+router.post('/:id/alerts/dismiss', requireEditor, async (req, res, next) => {
+  try {
+    const result = await alertService.dismissOverdueAlert({
+      articleId: req.params.id,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
     });
   } catch (error) {
     next(error);

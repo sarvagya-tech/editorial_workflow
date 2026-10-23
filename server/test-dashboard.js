@@ -1,8 +1,9 @@
 import 'dotenv/config';
+process.env.NODE_ENV = 'test';
 import http from 'http';
-import app from './src/index.js';
 import { prisma } from './src/prisma.js';
 import { getUtcWeekBoundaries, getLastEightWeeks } from './src/services/dashboard.service.js';
+const { default: app } = await import('./src/index.js');
 
 let server;
 let baseUrl;

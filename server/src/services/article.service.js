@@ -235,6 +235,7 @@ export async function listArticles({
         OR: [
           { title: { contains: cleanQ, mode: 'insensitive' } },
           { body: { contains: cleanQ, mode: 'insensitive' } },
+          { revisions: { some: { body: { contains: cleanQ, mode: 'insensitive' } } } },
         ],
       });
     }

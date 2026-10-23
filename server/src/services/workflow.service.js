@@ -295,10 +295,10 @@ export async function scheduleArticle({ articleId, revisionId, scheduledAt, user
   const article = await getArticleAndValidateAccess(articleId, user);
   const workingRev = resolveWorkingRevision(article, revisionId);
 
-  // State validation: must be in APPROVED status
-  if (workingRev.status !== 'APPROVED') {
+  // State validation: must be in APPROVED or SCHEDULED status (supports initial scheduling and rescheduling)
+  if (workingRev.status !== 'APPROVED' && workingRev.status !== 'SCHEDULED') {
     throw new AppError(
-      `Cannot schedule article: current revision status is ${workingRev.status}, expected APPROVED.`,
+      `Cannot schedule article: current revision status is ${workingRev.status}, expected APPROVED or SCHEDULED.`,
       400
     );
   }
@@ -343,10 +343,13 @@ export async function scheduleArticle({ articleId, revisionId, scheduledAt, user
           actorId: user.id,
           actorName: user.name,
           eventType: 'SCHEDULED',
-          oldStatus: 'APPROVED',
+          oldStatus: workingRev.status,
           newStatus: 'SCHEDULED',
           revisionId: workingRev.id,
-          description: `Article scheduled for publication at ${publishAtDate.toISOString()} by ${user.name}`,
+          description:
+            workingRev.status === 'SCHEDULED'
+              ? `Article publication rescheduled for ${publishAtDate.toISOString()} by ${user.name}`
+              : `Article scheduled for publication at ${publishAtDate.toISOString()} by ${user.name}`,
           metadata: {
             publishAt: publishAtDate.toISOString(),
             scheduleSequence: nextScheduleSequence,
