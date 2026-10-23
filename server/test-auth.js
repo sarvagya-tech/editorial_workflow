@@ -3,10 +3,11 @@
 // File: server/test-auth.js
 // Target: Validates auth endpoints, JWT verification, and role guards on Express.
 // ==============================================================================
+import 'dotenv/config';
 process.env.NODE_ENV = 'test';
-const { default: app } = await import('./src/index.js');
 import http from 'http';
 import { prisma } from './src/prisma.js';
+const { default: app } = await import('./src/index.js');
 
 let server;
 let baseUrl;
@@ -49,6 +50,17 @@ async function runTests() {
   let writerToken = null;
 
   try {
+    // 0. Warm up database connection (handles Neon serverless compute wake-up)
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+        break;
+      } catch (err) {
+        if (attempt === 5) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+
     // 1. Healthcheck
     console.log('[Test 1: Healthcheck]');
     const health = await request('/api/health');

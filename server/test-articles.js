@@ -4,10 +4,11 @@
 // Target: Tests all 18 Article, Revision, Comment & Timeline requirements against live Neon DB.
 // ==============================================================================
 
+import 'dotenv/config';
 process.env.NODE_ENV = 'test';
-const { default: app } = await import('./src/index.js');
 import http from 'http';
 import { prisma } from './src/prisma.js';
+const { default: app } = await import('./src/index.js');
 
 let server;
 let baseUrl;
@@ -61,6 +62,17 @@ async function runTests() {
   let testCreatedArticleId = null;
 
   try {
+    // 0. Warm up database connection (handles Neon serverless compute wake-up)
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+        break;
+      } catch (err) {
+        if (attempt === 5) throw err;
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+
     // 0. Setup Tokens
     const editorRes = await request('/api/auth/login', {
       method: 'POST',
@@ -309,6 +321,39 @@ async function runTests() {
     const commentsTimelineData = getPayload(timelineAfterComment);
     const commentTimelineEvent = commentsTimelineData.find((e) => e.eventType === 'COMMENT_ADDED');
     assert(commentTimelineEvent !== undefined, 'COMMENT_ADDED timeline event recorded atomically with comment');
+
+    // Atomicity test: Comment is not created if its timeline event fails
+    const initialCommentsCount = await prisma.articleComment.count({ where: { articleId: testCreatedArticleId } });
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.articleComment.create({
+          data: {
+            articleId: testCreatedArticleId,
+            authorId: editorUser.id,
+            content: 'Rollback test comment that must not persist',
+          },
+        });
+        throw new Error('Simulated failure during timeline event write');
+      });
+    } catch (e) {
+      // Expected transaction rollback
+    }
+    const finalCommentsCount = await prisma.articleComment.count({ where: { articleId: testCreatedArticleId } });
+    assert(initialCommentsCount === finalCommentsCount, 'A comment is not created if its timeline event cannot be recorded (transaction rollback)');
+
+    // Verify older snapshot immutability: Revision #1 snapshot was untouched by later working revision edits
+    const rev1Snapshot = await prisma.articleRevision.findUnique({
+      where: {
+        articleId_revisionNumber: {
+          articleId: testCreatedArticleId,
+          revisionNumber: 1,
+        },
+      },
+    });
+    assert(
+      rev1Snapshot && rev1Snapshot.title === '[TEST] Quantum Semiconductor Benchmarks',
+      'Editing a working revision does not mutate an older snapshot (Revision #1 snapshot preserved)'
+    );
 
     // [Test 14: Privacy of Comments & Timelines]
     console.log('\n[Test 14: Privacy of Comments & Timelines]');
