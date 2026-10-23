@@ -7,11 +7,22 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
+    "build": "echo Server ready (Node.js ES modules)",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
     "prisma:studio": "prisma studio",
-    "test:db": "node test-db-verification.js"
+    "test": "node test-alerts.js",
+    "test:db": "node test-db-verification.js",
+    "test:auth": "node test-auth.js",
+    "test:sections": "node test-sections.js",
+    "test:articles": "node test-articles.js",
+    "test:workflow": "node test-workflow.js",
+    "test:search": "node test-search-calendar.js",
+    "test:bulk": "node test-bulk-workflow.js",
+    "test:dashboard": "node test-dashboard.js",
+    "test:alerts": "node test-alerts.js",
+    "test:all": "node test-db-verification.js && node test-auth.js && node test-sections.js && node test-articles.js && node test-workflow.js && node test-search-calendar.js && node test-bulk-workflow.js && node test-dashboard.js && node test-alerts.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
