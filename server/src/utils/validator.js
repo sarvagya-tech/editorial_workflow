@@ -93,3 +93,27 @@ export function validateFutureDate(dateStr, fieldName = 'scheduledAt') {
   return date;
 }
 
+export function validateBulkArticleIds(articleIds, maxBatchSize = 100) {
+  if (!articleIds || !Array.isArray(articleIds) || articleIds.length === 0) {
+    throw new AppError("Field 'articleIds' must be a non-empty array of article IDs.", 400);
+  }
+  if (articleIds.length > maxBatchSize) {
+    throw new AppError(`Batch size cannot exceed ${maxBatchSize} articles. Received: ${articleIds.length}.`, 400);
+  }
+  const seen = new Set();
+  const cleanIds = [];
+  for (const id of articleIds) {
+    if (!id || typeof id !== 'string' || id.trim().length === 0) {
+      throw new AppError("Each item in 'articleIds' must be a non-empty string ID.", 400);
+    }
+    const cleanId = id.trim();
+    if (seen.has(cleanId)) {
+      throw new AppError(`Duplicate article ID '${cleanId}' detected in request payload. Each ID must be unique.`, 400);
+    }
+    seen.add(cleanId);
+    cleanIds.push(cleanId);
+  }
+  return cleanIds;
+}
+
+

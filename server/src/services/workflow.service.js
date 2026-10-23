@@ -1,6 +1,10 @@
 import { prisma } from '../prisma.js';
 import { AppError } from '../middleware/errorHandler.js';
-import { validateFutureDate, validateOptionalString } from '../utils/validator.js';
+import {
+  validateFutureDate,
+  validateOptionalString,
+  validateBulkArticleIds,
+} from '../utils/validator.js';
 
 const TX_OPTIONS = { maxWait: 15000, timeout: 30000 };
 
@@ -547,3 +551,131 @@ export async function unpublishArticle({ articleId, revisionId, reason, user }) 
     throw error;
   }
 }
+
+/**
+ * Bulk Transition: Schedule multiple articles for a shared future timestamp.
+ * Evaluates each article independently with isolated transactions and per-item reporting.
+ */
+export async function bulkScheduleArticles({ articleIds, scheduledAt, user }) {
+  if (user.role !== 'EDITOR') {
+    throw new AppError('Only editors can schedule articles.', 403);
+  }
+
+  const cleanIds = validateBulkArticleIds(articleIds);
+  validateFutureDate(scheduledAt, 'scheduledAt');
+
+  const results = [];
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const articleId of cleanIds) {
+    let existingArticle = null;
+    try {
+      existingArticle = await prisma.article.findUnique({
+        where: { id: articleId },
+        include: {
+          revisions: { orderBy: { revisionNumber: 'desc' }, take: 1 },
+        },
+      });
+
+      const updated = await scheduleArticle({
+        articleId,
+        scheduledAt,
+        user,
+      });
+
+      succeeded++;
+      const previousStatus = existingArticle?.revisions[0]?.status || existingArticle?.status || 'APPROVED';
+      results.push({
+        articleId,
+        success: true,
+        previousStatus,
+        currentStatus: 'SCHEDULED',
+      });
+    } catch (err) {
+      failed++;
+      const reason = err instanceof AppError ? err.message : 'Internal error processing article scheduling.';
+      const previousStatus = existingArticle?.revisions[0]?.status || existingArticle?.status;
+
+      results.push({
+        articleId,
+        success: false,
+        reason,
+        ...(previousStatus ? { previousStatus } : {}),
+      });
+    }
+  }
+
+  return {
+    message: 'Bulk scheduling completed',
+    summary: {
+      requested: cleanIds.length,
+      succeeded,
+      failed,
+    },
+    results,
+  };
+}
+
+/**
+ * Bulk Transition: Unpublish multiple articles (reverting SCHEDULED or PUBLISHED to APPROVED).
+ * Evaluates each article independently with isolated transactions and per-item reporting.
+ */
+export async function bulkUnpublishArticles({ articleIds, reason, user }) {
+  if (user.role !== 'EDITOR') {
+    throw new AppError('Only editors can unpublish articles.', 403);
+  }
+
+  const cleanIds = validateBulkArticleIds(articleIds);
+  const cleanReason = validateOptionalString(reason, 'reason', 500);
+
+  const results = [];
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const articleId of cleanIds) {
+    let existingArticle = null;
+    try {
+      existingArticle = await prisma.article.findUnique({
+        where: { id: articleId },
+        select: { id: true, status: true },
+      });
+
+      const updated = await unpublishArticle({
+        articleId,
+        reason: cleanReason,
+        user,
+      });
+
+      succeeded++;
+      const previousStatus = existingArticle?.status || 'PUBLISHED';
+      results.push({
+        articleId,
+        success: true,
+        previousStatus,
+        currentStatus: updated.status,
+      });
+    } catch (err) {
+      failed++;
+      const errorReason = err instanceof AppError ? err.message : 'Internal error processing article unpublishing.';
+
+      results.push({
+        articleId,
+        success: false,
+        reason: errorReason,
+        ...(existingArticle?.status ? { previousStatus: existingArticle.status } : {}),
+      });
+    }
+  }
+
+  return {
+    message: 'Bulk unpublishing completed',
+    summary: {
+      requested: cleanIds.length,
+      succeeded,
+      failed,
+    },
+    results,
+  };
+}
+

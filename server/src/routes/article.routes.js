@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireEditor } from '../middleware/auth.js';
 import * as articleService from '../services/article.service.js';
 import * as workflowService from '../services/workflow.service.js';
 import { AppError } from '../middleware/errorHandler.js';
@@ -53,6 +53,56 @@ router.get('/', async (req, res, next) => {
       success: true,
       data: result.articles,
       pagination: result.pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ----------------------------------------------------
+// BULK WORKFLOW OPERATIONS (PHASE 7)
+// ----------------------------------------------------
+
+/**
+ * POST /api/articles/bulk/schedule
+ * Bulk schedule articles for a future timestamp.
+ */
+router.post('/bulk/schedule', requireEditor, async (req, res, next) => {
+  try {
+    const { articleIds, scheduledAt } = req.body || {};
+    const result = await workflowService.bulkScheduleArticles({
+      articleIds,
+      scheduledAt,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      summary: result.summary,
+      results: result.results,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/articles/bulk/unpublish
+ * Bulk unpublish articles (reverting SCHEDULED or PUBLISHED to APPROVED).
+ */
+router.post('/bulk/unpublish', requireEditor, async (req, res, next) => {
+  try {
+    const { articleIds, reason } = req.body || {};
+    const result = await workflowService.bulkUnpublishArticles({
+      articleIds,
+      reason,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      summary: result.summary,
+      results: result.results,
     });
   } catch (error) {
     next(error);
