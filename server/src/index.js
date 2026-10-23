@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.routes.js';
 import sectionRoutes from './routes/section.routes.js';
 import articleRoutes from './routes/article.routes.js';
 import calendarRoutes from './routes/calendar.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 
 const app = express();
 
@@ -30,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Role authorization verification endpoints (used by test suites)
 app.get('/api/test/editor-only', authenticate, requireEditor, (req, res) => {
