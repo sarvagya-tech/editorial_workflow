@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import * as articleService from '../services/article.service.js';
+import * as workflowService from '../services/workflow.service.js';
 import { AppError } from '../middleware/errorHandler.js';
 
 const router = Router();
@@ -103,6 +104,123 @@ router.patch('/:id', async (req, res, next) => {
  */
 router.delete('/:id', (req, res, next) => {
   next(new AppError('Articles represent permanent editorial records and cannot be deleted.', 405));
+});
+
+// ----------------------------------------------------
+// WORKFLOW STATE MACHINE ENDPOINTS (PHASE 5)
+// ----------------------------------------------------
+
+/**
+ * POST /api/articles/:id/submit
+ * Submit working draft revision for editorial review (DRAFT -> IN_REVIEW).
+ */
+router.post('/:id/submit', async (req, res, next) => {
+  try {
+    const { revisionId } = req.body || {};
+    const article = await workflowService.submitArticle({
+      articleId: req.params.id,
+      revisionId,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Article successfully submitted for editorial review.',
+      data: article,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/articles/:id/approve
+ * Editor approves article for publication (IN_REVIEW -> APPROVED).
+ * Enforces self-approval block (editor cannot approve own article).
+ */
+router.post('/:id/approve', async (req, res, next) => {
+  try {
+    const { revisionId } = req.body || {};
+    const article = await workflowService.approveArticle({
+      articleId: req.params.id,
+      revisionId,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Article successfully approved for publication.',
+      data: article,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/articles/:id/schedule
+ * Editor schedules approved article for future publication (APPROVED -> SCHEDULED).
+ */
+router.post('/:id/schedule', async (req, res, next) => {
+  try {
+    const { scheduledAt, revisionId } = req.body || {};
+    const article = await workflowService.scheduleArticle({
+      articleId: req.params.id,
+      revisionId,
+      scheduledAt,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Article publication scheduled successfully.',
+      data: article,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/articles/:id/publish
+ * Editor publishes article immediately (APPROVED -> PUBLISHED) or publishes due SCHEDULED article.
+ */
+router.post('/:id/publish', async (req, res, next) => {
+  try {
+    const { revisionId } = req.body || {};
+    const article = await workflowService.publishArticle({
+      articleId: req.params.id,
+      revisionId,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Article published live successfully.',
+      data: article,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/articles/:id/unpublish
+ * Editor unpublishes a SCHEDULED or PUBLISHED article back to APPROVED status.
+ */
+router.post('/:id/unpublish', async (req, res, next) => {
+  try {
+    const { reason, revisionId } = req.body || {};
+    const article = await workflowService.unpublishArticle({
+      articleId: req.params.id,
+      revisionId,
+      reason,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      message: 'Article unpublished and returned to Approved status.',
+      data: article,
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // ----------------------------------------------------

@@ -84,3 +84,20 @@ This log documents the pivotal architecture and data modeling decisions made for
 - **Rejected:** Allowing live in-place edits on published articles.
 - **Why:** Goal 4 demands: *"Once Published, an article's content cannot be edited directly — the writer opens a new revision instead, which starts its own path at Draft and replaces the current content only once that revision itself reaches Published."* This prevents stealth corrections and maintains an untampered canonical record of what the public saw.
 
+---
+
+## Decision 11: Workflow State Machine Architecture & Self-Approval Prevention
+
+- **Chose:** A centralized workflow service (`workflow.service.js`) enforcing the strict transition pipeline `DRAFT` $\to$ `IN_REVIEW` $\to$ `APPROVED` $\to$ `SCHEDULED` $\to$ `PUBLISHED` (with `APPROVED` $\to$ `PUBLISHED` and unpublishing `SCHEDULED`/`PUBLISHED` $\to$ `APPROVED`), coupled with strict self-approval checks (`article.authorId === user.id || workingRevision.authorId === user.id`).
+- **Rejected:** Permitting editors to approve articles they authored, or allowing clients to mutate workflow statuses through generic CRUD PATCH requests.
+- **Why:** In newsrooms, four-eyes editorial governance ensures no single reporter or editor can write and publish unreviewed copy. Enforcing self-approval rejection on the backend (even when the caller possesses full EDITOR permissions) guarantees journalistic separation of concerns.
+
+---
+
+## Decision 12: Dual-Layer State Model for Published Article Revisions
+
+- **Chose:** Decoupling article-level published availability from working revision lifecycle progression: when a replacement revision (e.g. Revision #2) is drafted on a published article, `articles.status` remains `PUBLISHED` (and `articles.publishedRevisionId` remains anchored to Revision #1), while Revision #2 progresses through `DRAFT` $\to$ `IN_REVIEW` $\to$ `APPROVED`. `articles.publishedRevisionId` and live active text shift only upon final publication of Revision #2.
+- **Rejected:** Setting `articles.status` back to `IN_REVIEW`, which would unpublish the article and take it offline for public readers while a correction or follow-up was drafted.
+- **Why:** In high-traffic publications, live news coverage must remain continuously accessible while follow-up revisions undergo editorial review.
+
+

@@ -64,3 +64,18 @@ export function validatePagination(pageQuery, limitQuery, defaultLimit = 20, max
   const skip = (page - 1) * limit;
   return { page, limit, skip };
 }
+
+export function validateFutureDate(dateStr, fieldName = 'scheduledAt') {
+  if (!dateStr || typeof dateStr !== 'string') {
+    throw new AppError(`Field '${fieldName}' must be a valid ISO-8601 date string.`, 400);
+  }
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    throw new AppError(`Field '${fieldName}' is not a valid date string.`, 400);
+  }
+  if (date.getTime() <= Date.now()) {
+    throw new AppError(`Field '${fieldName}' must be a future date and time.`, 400);
+  }
+  return date;
+}
+
