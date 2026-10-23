@@ -29,7 +29,26 @@ async function handleExportCsv(req, res, next) {
   }
 }
 
+router.get('/', async (req, res, next) => {
+  try {
+    const { from, to, sectionId } = req.query;
+    const articles = await calendarService.getCalendarArticles({
+      from,
+      to,
+      sectionId,
+      user: req.user,
+    });
+    res.status(200).json({
+      success: true,
+      data: articles,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/export.csv', handleExportCsv);
 router.get('/export', handleExportCsv);
+
 
 export default router;

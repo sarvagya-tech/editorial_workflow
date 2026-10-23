@@ -46,9 +46,9 @@ function parseDateParam(dateStr, paramName, isEndOfDay = false) {
 }
 
 /**
- * Generates an editorial calendar CSV export scoped by role authorization and optional filters.
+ * Queries raw calendar articles scoped by role authorization and optional date filters.
  */
-export async function exportCalendarCsv({ from, to, sectionId, user }) {
+async function getCalendarArticlesRaw({ from, to, sectionId, user }) {
   const fromDate = parseDateParam(from, 'from', false);
   const toDate = parseDateParam(to, 'to', true);
 
@@ -106,8 +106,7 @@ export async function exportCalendarCsv({ from, to, sectionId, user }) {
 
   const finalWhere = where.AND.length > 0 ? where : {};
 
-  // Retrieve eligible articles with stable chronological ordering
-  const articles = await prisma.article.findMany({
+  return prisma.article.findMany({
     where: finalWhere,
     orderBy: [
       { publishAt: 'asc' },
@@ -127,6 +126,33 @@ export async function exportCalendarCsv({ from, to, sectionId, user }) {
       },
     },
   });
+}
+
+/**
+ * Returns calendar articles formatted as clean JSON objects for the frontend calendar view.
+ */
+export async function getCalendarArticles({ from, to, sectionId, user }) {
+  const articles = await getCalendarArticlesRaw({ from, to, sectionId, user });
+  return articles.map((art) => {
+    const isPublished = art.status === 'PUBLISHED';
+    return {
+      id: art.id,
+      title: isPublished ? (art.publishedRevision?.title || art.title) : (art.revisions[0]?.title || art.title),
+      status: art.status,
+      publishAt: art.publishAt,
+      publishedAt: art.publishedAt,
+      section: art.section,
+      author: art.author,
+      revisionNumber: isPublished ? (art.publishedRevision?.revisionNumber ?? 1) : (art.revisions[0]?.revisionNumber ?? 1),
+    };
+  });
+}
+
+/**
+ * Generates an editorial calendar CSV export scoped by role authorization and optional filters.
+ */
+export async function exportCalendarCsv({ from, to, sectionId, user }) {
+  const articles = await getCalendarArticlesRaw({ from, to, sectionId, user });
 
   // CSV Header
   const headers = [
