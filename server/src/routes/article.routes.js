@@ -37,13 +37,16 @@ router.post('/', async (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
-    const { page, limit, sectionId, authorId, status } = req.query;
+    const { page, limit, sectionId, authorId, status, q, sortBy, order } = req.query;
     const result = await articleService.listArticles({
       pageQuery: page,
       limitQuery: limit,
       sectionId,
       authorId,
       status,
+      q,
+      sortBy,
+      order,
       user: req.user,
     });
     res.status(200).json({

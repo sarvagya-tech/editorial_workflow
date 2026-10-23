@@ -8,6 +8,16 @@ import {
 } from '../utils/validator.js';
 
 const ALLOWED_STATUSES = ['DRAFT', 'IN_REVIEW', 'APPROVED', 'SCHEDULED', 'PUBLISHED'];
+const ALLOWED_SORT_FIELDS = [
+  'updatedAt',
+  'createdAt',
+  'status',
+  'publishAt',
+  'scheduledAt',
+  'publishedAt',
+  'title',
+];
+const ALLOWED_ORDERS = ['asc', 'desc'];
 
 /**
  * Verifies that the requesting user has permission to read the specified article.
@@ -159,10 +169,42 @@ export async function createArticle({ title, body, sectionId, user }) {
 }
 
 /**
- * List articles with server-side filtering, role scoping, and pagination.
+ * List articles with server-side filtering, role scoping, full-text search, and pagination.
  */
-export async function listArticles({ pageQuery, limitQuery, sectionId, authorId, status, user }) {
+export async function listArticles({
+  pageQuery,
+  limitQuery,
+  sectionId,
+  authorId,
+  status,
+  q,
+  sortBy,
+  order,
+  user,
+}) {
   const { page, limit, skip } = validatePagination(pageQuery, limitQuery, 20, 100);
+
+  // Validate sortBy if provided
+  let sortField = 'updatedAt';
+  if (sortBy !== undefined && sortBy !== null && sortBy !== '') {
+    if (!ALLOWED_SORT_FIELDS.includes(sortBy)) {
+      throw new AppError(
+        `Invalid sortBy field '${sortBy}'. Allowed fields: ${ALLOWED_SORT_FIELDS.join(', ')}`,
+        400
+      );
+    }
+    sortField = sortBy === 'scheduledAt' ? 'publishAt' : sortBy;
+  }
+
+  // Validate order if provided
+  let sortOrder = 'desc';
+  if (order !== undefined && order !== null && order !== '') {
+    const cleanOrder = String(order).trim().toLowerCase();
+    if (!ALLOWED_ORDERS.includes(cleanOrder)) {
+      throw new AppError("Invalid order value. Allowed values: 'asc', 'desc'.", 400);
+    }
+    sortOrder = cleanOrder;
+  }
 
   const where = { AND: [] };
 
@@ -185,6 +227,19 @@ export async function listArticles({ pageQuery, limitQuery, sectionId, authorId,
     });
   }
 
+  // Search query (searches title and body content)
+  if (q !== undefined && q !== null) {
+    const cleanQ = String(q).trim();
+    if (cleanQ.length > 0) {
+      where.AND.push({
+        OR: [
+          { title: { contains: cleanQ, mode: 'insensitive' } },
+          { body: { contains: cleanQ, mode: 'insensitive' } },
+        ],
+      });
+    }
+  }
+
   if (sectionId) {
     where.AND.push({ sectionId });
   }
@@ -200,12 +255,15 @@ export async function listArticles({ pageQuery, limitQuery, sectionId, authorId,
 
   const finalWhere = where.AND.length > 0 ? where : {};
 
+  // Deterministic tie-breaking order
+  const orderBy = [{ [sortField]: sortOrder }, { id: 'desc' }];
+
   const [articles, total] = await Promise.all([
     prisma.article.findMany({
       where: finalWhere,
       skip,
       take: limit,
-      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      orderBy,
       include: {
         section: { select: { id: true, name: true, isArchived: true } },
         author: { select: { id: true, name: true, email: true, role: true } },
@@ -231,9 +289,13 @@ export async function listArticles({ pageQuery, limitQuery, sectionId, authorId,
     prisma.article.count({ where: finalWhere }),
   ]);
 
+  const totalPages = Math.ceil(total / limit) || 1;
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+
   const formattedArticles = articles.map((art) => {
     const workingRevision = art.revisions[0] || null;
-    const { revisions, ...rest } = art;
+    const { revisions, body, ...rest } = art;
     return {
       ...rest,
       workingRevision,
@@ -246,7 +308,9 @@ export async function listArticles({ pageQuery, limitQuery, sectionId, authorId,
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit) || 1,
+      totalPages,
+      hasNextPage,
+      hasPrevPage,
     },
   };
 }

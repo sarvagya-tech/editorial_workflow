@@ -54,12 +54,26 @@ export function validateEnum(value, fieldName, allowedValues) {
 }
 
 export function validatePagination(pageQuery, limitQuery, defaultLimit = 20, maxLimit = 100) {
-  let page = parseInt(pageQuery, 10);
-  if (isNaN(page) || page < 1) page = 1;
+  let page = 1;
+  if (pageQuery !== undefined && pageQuery !== null && pageQuery !== '') {
+    const parsedPage = Number(pageQuery);
+    if (!Number.isInteger(parsedPage) || parsedPage < 1) {
+      throw new AppError("Field 'page' must be a positive integer.", 400);
+    }
+    page = parsedPage;
+  }
 
-  let limit = parseInt(limitQuery, 10);
-  if (isNaN(limit) || limit < 1) limit = defaultLimit;
-  if (limit > maxLimit) limit = maxLimit;
+  let limit = defaultLimit;
+  if (limitQuery !== undefined && limitQuery !== null && limitQuery !== '') {
+    const parsedLimit = Number(limitQuery);
+    if (!Number.isInteger(parsedLimit) || parsedLimit < 1) {
+      throw new AppError(`Field 'limit' must be a positive integer between 1 and ${maxLimit}.`, 400);
+    }
+    if (parsedLimit > maxLimit) {
+      throw new AppError(`Field 'limit' cannot exceed maximum allowed page size of ${maxLimit}.`, 400);
+    }
+    limit = parsedLimit;
+  }
 
   const skip = (page - 1) * limit;
   return { page, limit, skip };

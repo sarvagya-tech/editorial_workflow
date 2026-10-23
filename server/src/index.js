@@ -8,6 +8,7 @@ import { authenticate, requireEditor, requireWriter } from './middleware/auth.js
 import authRoutes from './routes/auth.routes.js';
 import sectionRoutes from './routes/section.routes.js';
 import articleRoutes from './routes/article.routes.js';
+import calendarRoutes from './routes/calendar.routes.js';
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/articles', articleRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Role authorization verification endpoints (used by test suites)
 app.get('/api/test/editor-only', authenticate, requireEditor, (req, res) => {
