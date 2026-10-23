@@ -9,6 +9,17 @@ import {
 const TX_OPTIONS = { maxWait: 15000, timeout: 30000 };
 
 /**
+ * System actor representation for autonomous background jobs.
+ * Authorized with EDITOR role, with explicit actorName and null actorId to satisfy foreign keys.
+ */
+export const SYSTEM_ACTOR = Object.freeze({
+  id: null,
+  name: 'System Scheduler',
+  role: 'EDITOR',
+  isSystem: true,
+});
+
+/**
  * Loads article with required relations and enforces zero-disclosure authorization.
  */
 async function getArticleAndValidateAccess(articleId, user) {
@@ -71,6 +82,18 @@ function resolveWorkingRevision(article, requestedRevisionId) {
       throw new AppError('Specified revision does not belong to this article.', 400);
     }
     return found;
+  }
+
+  // When article is SCHEDULED, prefer the specific revision marked SCHEDULED
+  if (article.status === 'SCHEDULED') {
+    const scheduledRev = article.revisions.find((r) => r.status === 'SCHEDULED');
+    if (scheduledRev) return scheduledRev;
+  }
+
+  // When article is APPROVED, prefer the specific revision marked APPROVED
+  if (article.status === 'APPROVED') {
+    const approvedRev = article.revisions.find((r) => r.status === 'APPROVED');
+    if (approvedRev) return approvedRev;
   }
 
   // Default to newest revision
@@ -373,7 +396,13 @@ export async function scheduleArticle({ articleId, revisionId, scheduledAt, user
 /**
  * Transition D & E: Publish article (APPROVED or due SCHEDULED -> PUBLISHED)
  */
-export async function publishArticle({ articleId, revisionId, user }) {
+export async function publishArticle({
+  articleId,
+  revisionId,
+  user,
+  expectedScheduleSequence,
+  referenceTime,
+}) {
   if (user.role !== 'EDITOR') {
     throw new AppError('Only editors can publish articles.', 403);
   }
@@ -381,10 +410,22 @@ export async function publishArticle({ articleId, revisionId, user }) {
   const article = await getArticleAndValidateAccess(articleId, user);
   const workingRev = resolveWorkingRevision(article, revisionId);
 
+  // Validate schedule sequence if specified (concurrency & rescheduling protection)
+  if (
+    expectedScheduleSequence !== undefined &&
+    article.scheduleSequence !== expectedScheduleSequence
+  ) {
+    throw new AppError(
+      `Schedule sequence mismatch: article has sequence ${article.scheduleSequence}, expected ${expectedScheduleSequence}. The article may have been rescheduled.`,
+      409
+    );
+  }
+
   // Validate state
+  const effectiveTime = referenceTime ? new Date(referenceTime).getTime() : Date.now();
   if (workingRev.status === 'SCHEDULED') {
     // Scheduled article: enforce that scheduled publication time has arrived
-    if (article.publishAt && article.publishAt.getTime() > Date.now()) {
+    if (article.publishAt && article.publishAt.getTime() > effectiveTime) {
       throw new AppError('Cannot publish scheduled article before its scheduled publication time.', 400);
     }
   } else if (workingRev.status !== 'APPROVED') {
@@ -397,6 +438,7 @@ export async function publishArticle({ articleId, revisionId, user }) {
   const now = new Date();
   const isReplacementRevision =
     Boolean(article.publishedRevisionId) && article.publishedRevisionId !== workingRev.id;
+  const isAutomated = Boolean(user.isSystem);
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -435,22 +477,31 @@ export async function publishArticle({ articleId, revisionId, user }) {
       });
 
       // 3. Insert audit timeline event
+      const eventDescription = isAutomated
+        ? isReplacementRevision
+          ? `Revision #${workingRev.revisionNumber} published live automatically by system scheduler`
+          : `Article published live automatically by system scheduler`
+        : isReplacementRevision
+        ? `Revision #${workingRev.revisionNumber} published live to replace previous revision by editor ${user.name}`
+        : `Article published live by editor ${user.name}`;
+
       await tx.timelineEvent.create({
         data: {
           articleId,
-          actorId: user.id,
+          actorId: user.id || null,
           actorName: user.name,
           eventType: isReplacementRevision ? 'REVISION_PUBLISHED' : 'STATUS_CHANGED',
           oldStatus: workingRev.status,
           newStatus: 'PUBLISHED',
           revisionId: workingRev.id,
-          description: isReplacementRevision
-            ? `Revision #${workingRev.revisionNumber} published live to replace previous revision by editor ${user.name}`
-            : `Article published live by editor ${user.name}`,
+          description: eventDescription,
           metadata: {
             publishedRevisionId: workingRev.id,
             revisionNumber: workingRev.revisionNumber,
             isReplacementRevision,
+            isAutomated,
+            publishedBy: isAutomated ? 'SYSTEM_SCHEDULER' : 'MANUAL_EDITOR',
+            scheduleSequence: article.scheduleSequence,
           },
         },
       });
@@ -466,6 +517,7 @@ export async function publishArticle({ articleId, revisionId, user }) {
     throw error;
   }
 }
+
 
 /**
  * Transition F: Unpublish article (SCHEDULED or PUBLISHED -> APPROVED)

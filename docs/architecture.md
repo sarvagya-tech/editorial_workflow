@@ -108,11 +108,21 @@ graph TD
 
 ---
 
+## 4. Autonomous Scheduled Article Publishing Subsystem
+
+To ensure articles scheduled for future publication transition to `PUBLISHED` state without requiring manual human intervention:
+- **In-Process Background Worker (`src/workers/scheduler.worker.js`)**: Runs an in-memory interval (default: 30s) protected against overlapping ticks. Queries PostgreSQL `NOW()` database time to prevent clock skew.
+- **Authenticated HTTP Cron Endpoint (`POST /api/internal/cron/publish`)**: Allows external cron runners (Vercel Cron, GitHub Actions, AWS EventBridge, Render Cron) to trigger publication with constant-time secret verification (`x-cron-secret`).
+- **Core State Machine Reuse**: Fully invokes `publishArticle` within an isolated transaction (`prisma.$transaction`), using optimistic locking (`version`) and schedule sequence validation (`scheduleSequence`) to eliminate duplicate publications or stale executions.
+- **Audit Immutability & System Actor**: Records atomic `STATUS_CHANGED -> PUBLISHED` timeline events authored by `SYSTEM_ACTOR` (`actorName: "System Scheduler"`, `actorId: null`) without impersonating editors.
+
+---
+
 ## What We Decided *Not* to Build, and Why
 
-1. **Background Cron Worker / Microservice for Scheduled Publishing:**
-   - *Why rejected:* Spawning a separate Redis/BullMQ worker or cron container introduces multi-service orchestration overhead and cold-start synchronization issues on free-tier serverless hosts.
-   - *Alternative chosen:* **Query-Time Status Resolution & Lazy Evaluation:** An article whose `publish_at <= NOW()` is immediately identified as live or overdue upon query. In addition, an explicit, lightweight serverless endpoint (`/api/bulk/publish-due`) can be triggered by a single HTTP ping or webhook.
+1. **Heavyweight Message Queue / Microservice Infrastructure (Inngest, BullMQ, Celery):**
+   - *Why rejected:* Spawning external Redis clusters or vendor-locked worker platforms introduces substantial orchestration, cost, and latency overhead.
+   - *Alternative chosen:* **In-Process Worker + Authenticated HTTP Cron Endpoint:** Relies directly on PostgreSQL transactional guarantees and indexed queries (`status, publish_at`), remaining 100% portable across standard servers and serverless deployments.
 2. **WebSocket Real-Time Connections:**
    - *Why rejected:* WebSockets add stateful connection management complexity, fail on serverless functions, and are not required for an editorial workflow with standard page navigation.
    - *Alternative chosen:* Short-interval polling / SWR revalidation on the alert navigation badge and dashboard metrics.

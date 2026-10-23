@@ -52,12 +52,13 @@ The application includes an instant **1-Click Demo User Switcher** in the top na
 | **8** | **Editorial Dashboard & Analytics** | ✅ **Done** | Scoped live production metrics, Monday–Sunday UTC publication trend chart, status distributions, and active desk allocations. |
 | **9** | **Tamper-Proof Audit History** | ✅ **Done** | Append-only `timeline_events` with PostgreSQL engine trigger `trg_timeline_immutable` blocking `UPDATE` and `DELETE` at the database level. |
 | **10** | **Overdue Publication Alerts** | ✅ **Done** | Dynamic detection where `publish_at < NOW()`, occurrence-based dismissal tied to `schedule_sequence` (re-arms upon rescheduling), and role-scoped permissions. |
+| **11** | **Autonomous Scheduled Publishing** | ✅ **Done** | In-process background worker + authenticated HTTP cron trigger (`/api/internal/cron/publish`), database clock synchronization (`NOW()`), sequence validation, concurrency locks, and system actor timeline audit. |
 
 ---
 
 ## 5. Automated Test Suite Results (100% Passing)
 
-All 9 test suites were executed against the live database with zero baseline failures:
+All 10 test suites were executed against the live database with zero baseline failures:
 
 | Phase | Test Suite File | Checks Passed | Coverage Area |
 | :--- | :--- | :---: | :--- |
@@ -70,7 +71,8 @@ All 9 test suites were executed against the live database with zero baseline fai
 | **Phase 7** | `test-bulk-workflow.js` | **57 / 57** | Bulk scheduling, bulk unpublishing, atomic batch reporting |
 | **Phase 8** | `test-dashboard.js` | **45 / 45** | 8-week date math, KPI calculations, role-based scoping |
 | **Phase 9** | `test-alerts.js` | **56 / 56** | Overdue detection, sequence-based dismissals, re-arming |
-| **Total** | **All 9 Verification Suites** | **390 / 390 (100%)** | Complete end-to-end integration coverage |
+| **Phase 10** | `test-scheduled-publisher.js` | **54 / 54** | Due/future articles, sequence validation, concurrency, cron security |
+| **Total** | **All 10 Verification Suites** | **444 / 444 (100%)** | Complete end-to-end integration coverage |
 
 ---
 
