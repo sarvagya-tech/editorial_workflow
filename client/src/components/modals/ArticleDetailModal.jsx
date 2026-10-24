@@ -478,6 +478,23 @@ export default function ArticleDetailModal({
                   Editorial Lifecycle Controls ({selectedArticle.status})
                 </span>
 
+                {workflowActionFeedback && (
+                  <div
+                    className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
+                      workflowActionFeedback.type === 'error'
+                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900'
+                    }`}
+                  >
+                    {workflowActionFeedback.type === 'error' ? (
+                      <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                    ) : (
+                      <Check className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    )}
+                    <span>{workflowActionFeedback.message}</span>
+                  </div>
+                )}
+
                 {/* DRAFT STATE */}
                 {selectedArticle.status === 'DRAFT' && (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">

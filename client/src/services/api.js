@@ -123,7 +123,7 @@ export async function getArticleDetails(token, articleId) {
   const revJson = await revRes.json();
   const comJson = await comRes.json();
 
-  if (!artRes.ok) throw new Error(artJson.message || 'Failed to fetch article details');
+  if (!artRes.ok) throw new Error(artJson.error || artJson.message || 'Failed to fetch article details');
 
   return {
     article: artJson.data || artJson,
@@ -139,7 +139,7 @@ export async function submitArticleForReview(token, articleId) {
     headers: { Authorization: `Bearer ${token}` },
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Submission failed');
+  if (!res.ok) throw new Error(json.error || json.message || 'Submission failed');
   return json;
 }
 
@@ -149,7 +149,7 @@ export async function approveArticle(token, articleId) {
     headers: { Authorization: `Bearer ${token}` },
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Approval failed');
+  if (!res.ok) throw new Error(json.error || json.message || 'Approval failed');
   return json;
 }
 
@@ -159,7 +159,7 @@ export async function publishArticleNow(token, articleId) {
     headers: { Authorization: `Bearer ${token}` },
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Publishing failed');
+  if (!res.ok) throw new Error(json.error || json.message || 'Publishing failed');
   return json;
 }
 
@@ -173,7 +173,7 @@ export async function scheduleArticle(token, articleId, scheduledAt) {
     body: JSON.stringify({ scheduledAt: new Date(scheduledAt).toISOString() }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Scheduling failed');
+  if (!res.ok) throw new Error(json.error || json.message || 'Scheduling failed');
   return json;
 }
 
@@ -187,7 +187,7 @@ export async function unpublishArticle(token, articleId, reason) {
     body: JSON.stringify({ reason: reason?.trim() || 'Editorial retraction / hold' }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Unpublish failed');
+  if (!res.ok) throw new Error(json.error || json.message || 'Unpublish failed');
   return json;
 }
 
@@ -204,7 +204,7 @@ export async function updateArticleDraft(token, articleId, { title, body }) {
     }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Failed to save changes');
+  if (!res.ok) throw new Error(json.error || json.message || 'Failed to save changes');
   return json;
 }
 
@@ -221,7 +221,7 @@ export async function forkArticleRevision(token, articleId, { title, body }) {
     }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Failed to open new revision');
+  if (!res.ok) throw new Error(json.error || json.message || 'Failed to open new revision');
   return json;
 }
 
@@ -235,7 +235,7 @@ export async function addArticleComment(token, articleId, content) {
     body: JSON.stringify({ content: content.trim() }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Failed to post comment');
+  if (!res.ok) throw new Error(json.error || json.message || 'Failed to post comment');
   return json;
 }
 

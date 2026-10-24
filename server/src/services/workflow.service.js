@@ -69,6 +69,24 @@ async function getArticleAndValidateAccess(articleId, user) {
     }
   }
 
+  // Defensive auto-healing: ensure article has at least Revision #1
+  if (!article.revisions || article.revisions.length === 0) {
+    const rev1 = await prisma.articleRevision.create({
+      data: {
+        articleId: article.id,
+        revisionNumber: 1,
+        title: article.title,
+        body: article.body || 'Draft body content.',
+        status: article.status,
+        authorId: article.authorId,
+      },
+      include: {
+        author: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+    article.revisions = [rev1];
+  }
+
   return article;
 }
 

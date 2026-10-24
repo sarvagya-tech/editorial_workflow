@@ -261,6 +261,18 @@ European Commissioner Margrethe Vestager and FTC leadership jointly affirmed tha
     },
   });
 
+  await prisma.articleRevision.create({
+    data: {
+      articleId: art2.id,
+      revisionNumber: 1,
+      title: art2.title,
+      body: art2.body,
+      status: ArticleStatus.SCHEDULED,
+      authorId: writer2.id,
+      createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000),
+    },
+  });
+
   await prisma.timelineEvent.createMany({
     data: [
       {
@@ -322,6 +334,18 @@ The densely packed native saplings achieve canopy closure within 36 months, gene
     },
   });
 
+  await prisma.articleRevision.create({
+    data: {
+      articleId: art3.id,
+      revisionNumber: 1,
+      title: art3.title,
+      body: art3.body,
+      status: ArticleStatus.IN_REVIEW,
+      authorId: writer3.id,
+      createdAt: new Date(now.getTime() - 8 * 60 * 60 * 1000),
+    },
+  });
+
   const comment1 = await prisma.articleComment.create({
     data: {
       articleId: art3.id,
@@ -379,6 +403,18 @@ Rail carrier trade associations initially lobbied against the $840 million capit
     },
   });
 
+  await prisma.articleRevision.create({
+    data: {
+      articleId: art4.id,
+      revisionNumber: 1,
+      title: art4.title,
+      body: art4.body,
+      status: ArticleStatus.APPROVED,
+      authorId: writer2.id,
+      createdAt: new Date(now.getTime() - 16 * 60 * 60 * 1000),
+    },
+  });
+
   await prisma.timelineEvent.createMany({
     data: [
       {
@@ -427,6 +463,18 @@ International Seabed Authority delegates meeting in Kingston are preparing to in
       status: ArticleStatus.DRAFT,
       sectionId: secTech.id,
       authorId: writer1.id,
+    },
+  });
+
+  await prisma.articleRevision.create({
+    data: {
+      articleId: art5.id,
+      revisionNumber: 1,
+      title: art5.title,
+      body: art5.body,
+      status: ArticleStatus.DRAFT,
+      authorId: writer1.id,
+      createdAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
     },
   });
 
