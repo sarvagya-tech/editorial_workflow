@@ -8,7 +8,6 @@ import {
   HelpCircle,
   ChevronDown,
   LogOut,
-  Compass,
 } from 'lucide-react';
 import { DEMO_ACCOUNTS } from '../../constants/accounts';
 
@@ -176,17 +175,6 @@ export default function Header({
             <RefreshCw
               className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-500' : ''}`}
             />
-          </button>
-
-          {/* Product Overview & Tour */}
-          <button
-            id="product-tour-btn"
-            onClick={onNavigateToLanding}
-            title="Product Overview & Tour"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-            aria-label="View product tour"
-          >
-            <Compass className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </button>
 
           {/* Sign Out Button */}

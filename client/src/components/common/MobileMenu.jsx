@@ -96,18 +96,6 @@ export default function MobileMenu({
       >
         <Cpu className="w-4 h-4 text-emerald-500" /> Cron Engine
       </button>
-
-      {/* Product Overview / Landing Page */}
-      <button
-        onClick={() => navigateTo('landing')}
-        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${
-          activeView === 'landing'
-            ? 'bg-slate-900 text-white dark:bg-slate-800'
-            : 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'
-        }`}
-      >
-        <span>Platform Tour & Overview</span>
-      </button>
     </div>
   );
 }

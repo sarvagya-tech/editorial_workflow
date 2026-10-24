@@ -905,6 +905,7 @@ export default function App() {
         alertCount={alertCount}
         currentUser={currentUser}
         onOpenCreateStory={handleOpenCreateStoryModal}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Layout Area */}
@@ -950,6 +951,15 @@ export default function App() {
               alertCount={alertCount}
               onNavigateToAlerts={() => setActiveView('alerts')}
               onRetry={() => fetchDashboard(token)}
+              articles={articles}
+              onOpenArticle={handleOpenArticle}
+              onOpenCreateStory={handleOpenCreateStoryModal}
+              onNavigateToCalendar={() => setActiveView('calendar')}
+              onNavigateToArticles={(status) => {
+                if (status) setArticlesStatusFilter(status);
+                setActiveView('articles');
+              }}
+              onNavigateToDesks={() => setActiveView('sections')}
             />
           )}
 

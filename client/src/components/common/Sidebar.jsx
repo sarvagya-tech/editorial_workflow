@@ -8,30 +8,97 @@ import {
   FileText,
   FolderKanban,
   Cpu,
-  Compass,
+  LogOut,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function Sidebar({
   activeView,
   setActiveView,
-  alertCount,
+  alertCount = 0,
   currentUser,
   onOpenCreateStory,
+  onSignOut,
 }) {
+  const isEditor = currentUser?.role === 'EDITOR';
+
+  const navGroups = [
+    {
+      title: 'Editorial Command',
+      items: [
+        {
+          id: 'dashboard',
+          label: 'Overview',
+          icon: LayoutDashboard,
+          badge: null,
+        },
+        {
+          id: 'alerts',
+          label: 'Overdue Alerts',
+          icon: AlertTriangle,
+          badge: alertCount > 0 ? alertCount : null,
+          badgeAlert: true,
+        },
+        {
+          id: 'calendar',
+          label: 'Release Calendar',
+          icon: Calendar,
+          badge: null,
+        },
+      ],
+    },
+    {
+      title: 'Stories & Desks',
+      items: [
+        {
+          id: 'articles',
+          label: 'Articles & Feed',
+          icon: FileText,
+          badge: null,
+        },
+        {
+          id: 'sections',
+          label: 'Desks & Beats',
+          icon: FolderKanban,
+          badge: null,
+        },
+      ],
+    },
+    {
+      title: 'Infrastructure',
+      items: [
+        {
+          id: 'scheduler',
+          label: 'Cron Scheduler',
+          icon: Cpu,
+          badgeText: '30s',
+          isLivePulse: true,
+        },
+      ],
+    },
+  ];
+
+  const userInitial = (currentUser?.name || currentUser?.label || 'U').charAt(0).toUpperCase();
+
   return (
-    <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-[#0d1322] border-r border-slate-200/80 dark:border-slate-800/80 sticky top-0 h-screen z-30 select-none transition-colors duration-200">
+    <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-[#0d1322] border-r border-slate-200/80 dark:border-slate-800/80 sticky top-0 h-screen z-30 select-none transition-colors duration-200 flex-shrink-0">
       {/* Brand Header */}
-      <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60">
+      <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 bg-white/50 dark:bg-[#0d1322]/50">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-emerald-600 dark:bg-emerald-500 text-white rounded-lg flex items-center justify-center shadow-sm shadow-emerald-500/20">
+          <div className="w-8 h-8 bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-500/20">
             <Newspaper className="w-4.5 h-4.5" />
           </div>
           <div>
-            <span className="font-serif-headline text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-none block">
-              The Dispatch
-            </span>
-            <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">
-              Newsroom System
+            <div className="flex items-center gap-1.5">
+              <span className="font-serif-headline text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-none">
+                The Dispatch
+              </span>
+              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                PRO
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-medium tracking-wider uppercase block mt-0.5">
+              Newsroom Workspace
             </span>
           </div>
         </div>
@@ -42,168 +109,144 @@ export default function Sidebar({
         <button
           id="sidebar-new-story-btn"
           onClick={onOpenCreateStory}
-          className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-semibold text-xs rounded-xl shadow-sm shadow-emerald-600/20 transition flex items-center justify-center gap-2"
+          className="w-full py-2.5 px-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-between group active:scale-[0.98]"
         >
-          <PenSquare className="w-4 h-4" />
-          <span>New Story</span>
+          <span className="flex items-center gap-2">
+            <PenSquare className="w-4 h-4 transition-transform group-hover:rotate-6" />
+            <span>New Story Draft</span>
+          </span>
+          <kbd className="text-[10px] font-mono-code font-bold bg-white/20 px-1.5 py-0.5 rounded text-white">
+            N
+          </kbd>
         </button>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {/* 1. Overview */}
-        <button
-          id="nav-dashboard"
-          onClick={() => setActiveView('dashboard')}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            activeView === 'dashboard'
-              ? 'bg-slate-900 text-white dark:bg-slate-800 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <LayoutDashboard className="w-4 h-4" />
-            Overview
-          </span>
-          {activeView === 'dashboard' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
-        </button>
+      {/* Navigation Sections */}
+      <nav className="flex-1 px-3 py-4 space-y-5 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.title} className="space-y-1">
+            <h4 className="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              {group.title}
+            </h4>
+            <div className="space-y-0.5 pt-1">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.id;
 
-        {/* 2. Overdue Alerts */}
-        <button
-          id="nav-alerts"
-          onClick={() => setActiveView('alerts')}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            activeView === 'alerts'
-              ? 'bg-slate-900 text-white dark:bg-slate-800 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <AlertTriangle className={`w-4 h-4 ${alertCount > 0 ? 'text-amber-500' : 'text-slate-400'}`} />
-            Overdue Alerts
-          </span>
-          {alertCount > 0 ? (
-            <span
-              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                activeView === 'alerts'
-                  ? 'bg-amber-400 text-slate-900'
-                  : 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-              }`}
-            >
-              {alertCount}
-            </span>
-          ) : (
-            <span className="text-[11px] text-slate-400 font-normal">0</span>
-          )}
-        </button>
+                return (
+                  <button
+                    key={item.id}
+                    id={`nav-${item.id}`}
+                    onClick={() => setActiveView(item.id)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+                      isActive
+                        ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Icon
+                        className={`w-4 h-4 transition-colors ${
+                          isActive
+                            ? 'text-white'
+                            : item.badgeAlert && alertCount > 0
+                            ? 'text-amber-500'
+                            : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'
+                        }`}
+                      />
+                      <span>{item.label}</span>
+                    </span>
 
-        {/* 3. Editorial Calendar */}
-        <button
-          id="nav-calendar"
-          onClick={() => setActiveView('calendar')}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            activeView === 'calendar'
-              ? 'bg-slate-900 text-white dark:bg-slate-800 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <Calendar className="w-4 h-4" />
-            Release Calendar
-          </span>
-          {activeView === 'calendar' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
-        </button>
+                    {/* Badge or indicator */}
+                    {item.badge !== null && item.badge !== undefined && (
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : item.badgeAlert && alertCount > 0
+                            ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800 animate-pulse'
+                            : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
 
-        {/* 4. Articles & Feed */}
-        <button
-          id="nav-articles"
-          onClick={() => setActiveView('articles')}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            activeView === 'articles'
-              ? 'bg-slate-900 text-white dark:bg-slate-800 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <FileText className="w-4 h-4" />
-            Articles & Feed
-          </span>
-          {activeView === 'articles' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
-        </button>
+                    {item.badgeText && (
+                      <span
+                        className={`flex items-center gap-1.5 text-[10px] font-mono-code font-bold px-2 py-0.5 rounded-full ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60'
+                        }`}
+                      >
+                        {item.isLivePulse && (
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isActive ? 'bg-white' : 'bg-emerald-500'
+                            } animate-pulse`}
+                          />
+                        )}
+                        {item.badgeText}
+                      </span>
+                    )}
 
-        {/* 5. Desks & Beats */}
-        <button
-          id="nav-sections"
-          onClick={() => setActiveView('sections')}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            activeView === 'sections'
-              ? 'bg-slate-900 text-white dark:bg-slate-800 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <FolderKanban className="w-4 h-4" />
-            Desks & Beats
-          </span>
-          {activeView === 'sections' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>}
-        </button>
-
-        {/* 6. Autonomous Scheduler */}
-        <button
-          id="nav-scheduler"
-          onClick={() => setActiveView('scheduler')}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            activeView === 'scheduler'
-              ? 'bg-slate-900 text-white dark:bg-slate-800 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <Cpu className="w-4 h-4 text-emerald-500" />
-            Cron Engine
-          </span>
-          <span className="flex items-center gap-1.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            30s
-          </span>
-        </button>
-
-        {/* 7. Product Overview / Tour */}
-        <button
-          id="nav-landing"
-          onClick={() => setActiveView('landing')}
-          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-            activeView === 'landing'
-              ? 'bg-slate-900 text-white dark:bg-slate-800 dark:text-white shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <Compass className="w-4 h-4 text-emerald-500" />
-            Product Tour
-          </span>
-          <span className="text-[10px] text-slate-400 font-normal">Overview</span>
-        </button>
+                    {isActive && !item.badge && !item.badgeText && (
+                      <ChevronRight className="w-3.5 h-3.5 text-white/70" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Sidebar Footer — User Context */}
-      <div className="p-3.5 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/30">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Active Role</span>
-          <span
-            className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
-              currentUser.role === 'EDITOR'
-                ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50'
-                : 'bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800/50'
-            }`}
-          >
-            {currentUser.role}
-          </span>
+      {/* Enhanced Sidebar Footer — User Persona Card */}
+      <div className="p-3.5 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/70 dark:bg-slate-900/40">
+        <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className={`w-8 h-8 rounded-xl font-bold flex items-center justify-center text-xs flex-shrink-0 ${
+                isEditor
+                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                  : 'bg-sky-100 text-sky-800 dark:bg-sky-950/80 dark:text-sky-300 border border-sky-300 dark:border-sky-800'
+              }`}
+            >
+              {userInitial}
+            </div>
+            <div className="truncate">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                  {currentUser?.name || (currentUser?.label ? currentUser.label.split(' ')[0] : 'Staff')}
+                </p>
+                <span
+                  className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase tracking-wider ${
+                    isEditor
+                      ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                      : 'bg-sky-50 text-sky-800 dark:bg-sky-950/80 dark:text-sky-300'
+                  }`}
+                >
+                  {currentUser?.role || 'USER'}
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                {currentUser?.desk || 'General Desk'}
+              </p>
+            </div>
+          </div>
+
+          {onSignOut && (
+            <button
+              onClick={onSignOut}
+              title="Sign out of newsroom"
+              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition flex-shrink-0"
+              aria-label="Sign out"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
-        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-          {currentUser.name || (currentUser.label ? currentUser.label.split(' ')[0] : 'User')}
-        </p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{currentUser.desk}</p>
       </div>
     </aside>
   );
