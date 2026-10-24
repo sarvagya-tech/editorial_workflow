@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Search,
   X,
@@ -9,6 +9,10 @@ import {
   ChevronRight,
   Sparkles,
   Undo2,
+  BookOpen,
+  Layers,
+  Clock,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { STATUS_CONFIG, STATUS_FILTER_TABS } from '../../constants/status';
 
@@ -29,25 +33,49 @@ export default function ArticlesView({
   onOpenBulkSchedule,
   onOpenBulkUnpublish,
   onClearBulkSelection,
+  dashboardData,
 }) {
+  // Compute counts per status
+  const countsByStatus = useMemo(() => {
+    const map = {
+      '': articles.length,
+      DRAFT: 0,
+      IN_REVIEW: 0,
+      APPROVED: 0,
+      SCHEDULED: 0,
+      PUBLISHED: 0,
+    };
+    articles.forEach((a) => {
+      if (map[a.status] !== undefined) {
+        map[a.status]++;
+      }
+    });
+    return map;
+  }, [articles]);
+
   return (
     <div className="space-y-6">
       {/* Filter Tabs & Search Bar */}
       <div className="bg-white dark:bg-[#111827] p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm space-y-4 transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Article Repository</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Article Repository</h2>
+              <span className="text-xs font-mono-code font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {articles.length} Loaded
+              </span>
+            </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Explore stories across drafting, review, scheduled drop, and published stages.
             </p>
           </div>
 
           {/* Search Bar */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search title or body..."
+              placeholder="Search title, dek, or body copy..."
               value={articlesSearch}
               onChange={(e) => setArticlesSearch(e.target.value)}
               className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-slate-100"
@@ -67,19 +95,35 @@ export default function ArticlesView({
         {/* Filter Pill Tabs & Bulk Select Toggle */}
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex flex-wrap items-center gap-1.5">
-            {STATUS_FILTER_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setArticlesStatusFilter(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition ${
-                  articlesStatusFilter === tab.id
-                    ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {STATUS_FILTER_TABS.map((tab) => {
+              const isActive = articlesStatusFilter === tab.id;
+              const count = countsByStatus[tab.id];
+
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setArticlesStatusFilter(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition ${
+                    isActive
+                      ? 'bg-slate-900 text-white dark:bg-emerald-600 dark:text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {count !== undefined && (
+                    <span
+                      className={`text-[10px] font-mono-code px-1.5 py-0.2 rounded-full ${
+                        isActive
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Select All Checkbox */}
@@ -129,20 +173,23 @@ export default function ArticlesView({
         </div>
       ) : articles.length === 0 ? (
         <div className="p-12 text-center bg-white dark:bg-[#111827] rounded-2xl border border-slate-200/80 dark:border-slate-800/80">
-          <p className="text-sm text-slate-500">No articles matched your filter or search criteria.</p>
+          <p className="text-sm text-slate-500 font-medium">No articles matched your filter or search criteria.</p>
+          <p className="text-xs text-slate-400 mt-1">Try resetting the status filter or clearing your search term.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {articles.map((art) => {
             const isSelected = selectedArticleIds.includes(art.id);
+            const wordCount = (art.body || '').split(/\s+/).filter(Boolean).length;
+            const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
             return (
               <div
                 key={art.id}
-                className={`p-4 bg-white dark:bg-[#111827] rounded-xl border transition flex items-center justify-between gap-4 ${
+                className={`p-4.5 bg-white dark:bg-[#111827] rounded-xl border transition-all flex items-center justify-between gap-4 ${
                   isSelected
-                    ? 'border-emerald-500 dark:border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10'
-                    : 'border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
+                    ? 'border-emerald-500 dark:border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/10 shadow-xs'
+                    : 'border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs'
                 }`}
               >
                 {/* Checkbox (Editor only) */}
@@ -152,7 +199,7 @@ export default function ArticlesView({
                       e.stopPropagation();
                       onToggleSelectArticle(art.id);
                     }}
-                    className="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    className="cursor-pointer text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0"
                   >
                     {isSelected ? (
                       <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -175,7 +222,7 @@ export default function ArticlesView({
                     >
                       {art.status}
                     </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <span className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
                       {art.section?.name || 'General Desk'}
                     </span>
                     {art.status === 'SCHEDULED' && art.publishAt && (
@@ -183,19 +230,23 @@ export default function ArticlesView({
                         <CalendarClock className="w-3 h-3" /> {new Date(art.publishAt).toLocaleDateString()}
                       </span>
                     )}
+                    {/* Read statistics pill */}
+                    <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-slate-400 font-mono-code">
+                      <BookOpen className="w-3 h-3 text-slate-400" /> {readingTime} min read · {wordCount} words
+                    </span>
                   </div>
                   <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate hover:text-emerald-600 transition">
                     {art.title}
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    By {art.author?.name} • Updated {new Date(art.updatedAt).toLocaleDateString()}
+                    By <span className="font-semibold text-slate-700 dark:text-slate-300">{art.author?.name}</span> • Updated {new Date(art.updatedAt).toLocaleDateString()}
                   </p>
                 </div>
 
                 {/* Action Trigger */}
                 <button
                   onClick={() => onOpenArticle(art.id)}
-                  className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+                  className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition flex-shrink-0"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -207,7 +258,7 @@ export default function ArticlesView({
 
       {/* Floating Bulk Action Bar */}
       {selectedArticleIds.length > 0 && currentUser.role === 'EDITOR' && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 dark:bg-[#0f172a] text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in slide-in-from-bottom duration-200">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 dark:bg-[#0f172a]/95 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center gap-4 animate-in slide-in-from-bottom duration-200">
           <span className="text-xs font-bold font-mono-code text-emerald-400">
             {selectedArticleIds.length} Stories Selected
           </span>

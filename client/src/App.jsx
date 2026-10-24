@@ -52,6 +52,8 @@ import BulkScheduleModal from './components/modals/BulkScheduleModal';
 import BulkUnpublishModal from './components/modals/BulkUnpublishModal';
 import ForkRevisionModal from './components/modals/ForkRevisionModal';
 import ArticleDetailModal from './components/modals/ArticleDetailModal';
+import CommandPalette from './components/common/CommandPalette';
+import ShortcutsModal from './components/modals/ShortcutsModal';
 
 export default function App() {
   // Theme Toggle: 'light' | 'dark'
@@ -81,6 +83,10 @@ export default function App() {
 
   // Global Toast / Notice
   const [globalNotice, setGlobalNotice] = useState(null);
+
+  // Command Palette & Keyboard Shortcuts
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   // Dashboard Data
   const [dashboardData, setDashboardData] = useState(null);
@@ -149,6 +155,48 @@ export default function App() {
   const [forkRevisionTitle, setForkRevisionTitle] = useState('');
   const [forkRevisionBody, setForkRevisionBody] = useState('');
   const [forkingRevision, setForkingRevision] = useState(false);
+
+  // Global Keyboard Shortcuts (Cmd+K, ?, n, d, a, c, s, t)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Command Palette: Cmd+K / Ctrl+K
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowCommandPalette((prev) => !prev);
+        return;
+      }
+
+      // Check if user is typing in an input, textarea, or contentEditable
+      const targetTag = e.target.tagName?.toLowerCase();
+      const isInput =
+        targetTag === 'input' ||
+        targetTag === 'textarea' ||
+        targetTag === 'select' ||
+        e.target.isContentEditable;
+      if (isInput) return;
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowShortcutsModal((prev) => !prev);
+      } else if (e.key.toLowerCase() === 'n' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        handleOpenCreateStoryModal();
+      } else if (e.key.toLowerCase() === 'd' && !e.ctrlKey && !e.metaKey) {
+        setActiveView('dashboard');
+      } else if (e.key.toLowerCase() === 'a' && !e.ctrlKey && !e.metaKey) {
+        setActiveView('articles');
+      } else if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey) {
+        setActiveView('calendar');
+      } else if (e.key.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey) {
+        setActiveView('sections');
+      } else if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey) {
+        setActiveView('scheduler');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // ----------------------------------------------------
   // Authentication
@@ -731,6 +779,8 @@ export default function App() {
           mobileMenuOpen={mobileMenuOpen}
           setMobileMenuOpen={setMobileMenuOpen}
           onOpenCreateStory={handleOpenCreateStoryModal}
+          onOpenCommandPalette={() => setShowCommandPalette(true)}
+          onOpenShortcuts={() => setShowShortcutsModal(true)}
         />
 
         {/* Global Toast Notification */}
@@ -819,6 +869,8 @@ export default function App() {
               sectionActionId={sectionActionId}
               onOpenCreateSection={() => setShowCreateSectionModal(true)}
               onToggleArchiveSection={handleToggleArchiveSection}
+              token={token}
+              onToast={(msg) => setGlobalNotice({ message: msg, type: 'success' })}
             />
           )}
 
@@ -918,6 +970,24 @@ export default function App() {
           setShowForkRevisionModal(true);
         }}
         onAddComment={handleAddComment}
+      />
+
+      {/* Global Command Palette (⌘K) */}
+      <CommandPalette
+        isOpen={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        onNavigate={(view) => setActiveView(view)}
+        onOpenStory={(article) => handleOpenArticle(article.id)}
+        onOpenCreateStory={handleOpenCreateStoryModal}
+        onSwitchUser={(user) => authenticateUser(user)}
+        currentUser={currentUser}
+        articles={articles}
+      />
+
+      {/* Keyboard Shortcuts Guide Modal (?) */}
+      <ShortcutsModal
+        isOpen={showShortcutsModal}
+        onClose={() => setShowShortcutsModal(false)}
       />
     </div>
   );

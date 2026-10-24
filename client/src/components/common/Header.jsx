@@ -1,5 +1,16 @@
-import React from 'react';
-import { Menu, Plus, UserCheck, Sun, Moon, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Menu,
+  Plus,
+  UserCheck,
+  Sun,
+  Moon,
+  RefreshCw,
+  Search,
+  Command,
+  HelpCircle,
+  Radio,
+} from 'lucide-react';
 import { DEMO_ACCOUNTS } from '../../constants/accounts';
 
 export default function Header({
@@ -13,7 +24,22 @@ export default function Header({
   mobileMenuOpen,
   setMobileMenuOpen,
   onOpenCreateStory,
+  onOpenCommandPalette,
+  onOpenShortcuts,
 }) {
+  const [timeString, setTimeString] = useState('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      const utc = now.toUTCString().slice(17, 22) + ' UTC';
+      setTimeString(utc);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const getViewTitle = () => {
     switch (activeView) {
       case 'dashboard':
@@ -46,16 +72,40 @@ export default function Header({
         </button>
 
         {/* Breadcrumb / Title */}
-        <div>
-          <span className="text-xs text-slate-400 font-medium">Newsroom / </span>
-          <span className="text-sm font-bold text-slate-900 dark:text-white capitalize">
-            {getViewTitle()}
-          </span>
+        <div className="flex items-center gap-3">
+          <div>
+            <span className="text-xs text-slate-400 font-medium">Newsroom / </span>
+            <span className="text-sm font-bold text-slate-900 dark:text-white capitalize">
+              {getViewTitle()}
+            </span>
+          </div>
+
+          {/* Live Edition Ticker Badge */}
+          <div className="hidden xl:flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-slate-800">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+              Edition Live
+            </span>
+            <span className="text-[11px] font-mono-code text-slate-400">{timeString}</span>
+          </div>
         </div>
       </div>
 
-      {/* Quick Actions, Demo Switcher, Theme Switcher & Refresh */}
-      <div className="flex items-center gap-2.5">
+      {/* Quick Search, Demo Switcher, Theme Switcher & Actions */}
+      <div className="flex items-center gap-2 sm:gap-2.5">
+        {/* Spotlight Command Palette Trigger */}
+        <button
+          onClick={onOpenCommandPalette}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/60 rounded-xl transition shadow-xs cursor-pointer"
+          title="Open Command Palette (Ctrl+K or ⌘K)"
+        >
+          <Search className="w-3.5 h-3.5 text-slate-400" />
+          <span className="hidden md:inline font-medium text-slate-600 dark:text-slate-300">Quick Search...</span>
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono-code font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded shadow-xs">
+            ⌘K
+          </kbd>
+        </button>
+
         {/* Top Bar Quick Story Button */}
         <button
           id="header-new-story-btn"
@@ -69,7 +119,7 @@ export default function Header({
         {/* Demo User Switcher */}
         <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs border border-slate-200/60 dark:border-slate-700/60">
           <span className="text-slate-500 dark:text-slate-400 px-2 font-medium hidden lg:flex items-center gap-1">
-            <UserCheck className="w-3.5 h-3.5" /> Demo User:
+            <UserCheck className="w-3.5 h-3.5" /> Persona:
           </span>
           <select
             id="demo-user-select"
@@ -88,7 +138,7 @@ export default function Header({
           </select>
         </div>
 
-        {/* Minimalist Theme Segmented Switch */}
+        {/* Theme Segmented Switch */}
         <div className="flex items-center bg-slate-100 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs">
           <button
             id="theme-light-btn"
@@ -117,6 +167,15 @@ export default function Header({
             <span className="text-[11px] font-medium hidden sm:inline">Dark</span>
           </button>
         </div>
+
+        {/* Shortcuts Helper Button */}
+        <button
+          onClick={onOpenShortcuts}
+          title="Keyboard shortcuts (?)"
+          className="hidden md:flex p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition shadow-xs"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
 
         {/* Refresh Button */}
         <button
