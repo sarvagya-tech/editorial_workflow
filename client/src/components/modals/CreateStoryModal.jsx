@@ -34,10 +34,11 @@ export default function CreateStoryModal({
   const readTimeMinutes = Math.max(1, Math.ceil(wordCount / 200));
 
   const handleApplyTemplate = (tmpl) => {
-    if (body.trim() && !window.confirm('Replace current text with template?')) {
-      return;
+    if (!body.trim()) {
+      setBody(tmpl.template);
+    } else {
+      setBody((prev) => `${prev.trim()}\n\n${tmpl.template}`);
     }
-    setBody(tmpl.template);
   };
 
   return (

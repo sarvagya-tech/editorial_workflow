@@ -24,8 +24,10 @@ export default function CommandPalette({
   onClose,
   activeView,
   setActiveView,
+  onNavigate,
   currentUser,
   onUserSelect,
+  onSwitchUser,
   theme,
   setTheme,
   onOpenCreateStory,
@@ -33,10 +35,26 @@ export default function CommandPalette({
   onExportCalendarCsv,
   articles = [],
   onOpenArticle,
+  onOpenStory,
 }) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
+
+  const navigate = (view) => {
+    if (setActiveView) setActiveView(view);
+    else if (onNavigate) onNavigate(view);
+  };
+
+  const switchUser = (user) => {
+    if (onUserSelect) onUserSelect(user);
+    else if (onSwitchUser) onSwitchUser(user);
+  };
+
+  const openStory = (id) => {
+    if (onOpenArticle) onOpenArticle(id);
+    else if (onOpenStory) onOpenStory({ id });
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -53,88 +71,104 @@ export default function CommandPalette({
       label: 'Go to Overview / Dashboard',
       category: 'Navigation',
       icon: LayoutDashboard,
-      action: () => setActiveView('dashboard'),
+      action: () => navigate('dashboard'),
     },
     {
       id: 'nav-articles',
       label: 'Go to Articles & Story Repository',
       category: 'Navigation',
       icon: FileText,
-      action: () => setActiveView('articles'),
+      action: () => navigate('articles'),
     },
     {
       id: 'nav-calendar',
       label: 'Go to Release Calendar',
       category: 'Navigation',
       icon: Calendar,
-      action: () => setActiveView('calendar'),
+      action: () => navigate('calendar'),
     },
     {
       id: 'nav-sections',
       label: 'Go to Desks & Beats',
       category: 'Navigation',
       icon: FolderKanban,
-      action: () => setActiveView('sections'),
+      action: () => navigate('sections'),
     },
     {
       id: 'nav-alerts',
       label: 'Go to Overdue Alerts',
       category: 'Navigation',
       icon: AlertTriangle,
-      action: () => setActiveView('alerts'),
+      action: () => navigate('alerts'),
     },
     {
       id: 'nav-scheduler',
       label: 'Go to Autonomous Scheduler Engine',
       category: 'Navigation',
       icon: Cpu,
-      action: () => setActiveView('scheduler'),
+      action: () => navigate('scheduler'),
     },
     {
       id: 'nav-landing',
       label: 'View Product Tour & Overview',
       category: 'Navigation',
       icon: Compass,
-      action: () => setActiveView('landing'),
+      action: () => navigate('landing'),
     },
   ];
 
   const actionItems = [
-    {
-      id: 'act-new-story',
-      label: 'Create New Story Draft',
-      category: 'Actions',
-      icon: Plus,
-      badge: 'Editor & Writer',
-      action: () => onOpenCreateStory(),
-    },
-    ...(currentUser.role === 'EDITOR'
+    ...(onOpenCreateStory
       ? [
           {
-            id: 'act-new-desk',
-            label: 'Create New Editorial Desk',
+            id: 'act-new-story',
+            label: 'Create New Story Draft',
             category: 'Actions',
             icon: Plus,
-            badge: 'Editor Only',
-            action: () => onOpenCreateSection(),
-          },
-          {
-            id: 'act-export-csv',
-            label: 'Export Editorial Calendar (CSV)',
-            category: 'Actions',
-            icon: Download,
-            badge: 'Export',
-            action: () => onExportCalendarCsv(),
+            badge: 'Editor & Writer',
+            action: () => onOpenCreateStory(),
           },
         ]
       : []),
-    {
-      id: 'act-toggle-theme',
-      label: `Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`,
-      category: 'Preferences',
-      icon: theme === 'dark' ? Sun : Moon,
-      action: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
-    },
+    ...(currentUser?.role === 'EDITOR'
+      ? [
+          ...(onOpenCreateSection
+            ? [
+                {
+                  id: 'act-new-desk',
+                  label: 'Create New Editorial Desk',
+                  category: 'Actions',
+                  icon: Plus,
+                  badge: 'Editor Only',
+                  action: () => onOpenCreateSection(),
+                },
+              ]
+            : []),
+          ...(onExportCalendarCsv
+            ? [
+                {
+                  id: 'act-export-csv',
+                  label: 'Export Editorial Calendar (CSV)',
+                  category: 'Actions',
+                  icon: Download,
+                  badge: 'Export',
+                  action: () => onExportCalendarCsv(),
+                },
+              ]
+            : []),
+        ]
+      : []),
+    ...(setTheme
+      ? [
+          {
+            id: 'act-toggle-theme',
+            label: `Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`,
+            category: 'Preferences',
+            icon: theme === 'dark' ? Sun : Moon,
+            action: () => setTheme(theme === 'dark' ? 'light' : 'dark'),
+          },
+        ]
+      : []),
   ];
 
   const userItems = DEMO_ACCOUNTS.map((acc) => ({
@@ -142,8 +176,8 @@ export default function CommandPalette({
     label: `Switch User: ${acc.label} (${acc.role})`,
     category: 'Switch Role / Persona',
     icon: UserCheck,
-    active: currentUser.email === acc.email,
-    action: () => onUserSelect(acc),
+    active: currentUser?.email === acc.email,
+    action: () => switchUser(acc),
   }));
 
   // Article search results (top 5 matching articles)
@@ -161,7 +195,7 @@ export default function CommandPalette({
       subtitle: `${a.section?.name || 'General'} • ${a.status} • by ${a.author?.name || 'Staff'}`,
       category: 'Matching Stories',
       icon: Sparkles,
-      action: () => onOpenArticle(a.id),
+      action: () => openStory(a.id),
     }));
 
   const allItems = [...navigationItems, ...actionItems, ...userItems, ...articleItems].filter((item) => {

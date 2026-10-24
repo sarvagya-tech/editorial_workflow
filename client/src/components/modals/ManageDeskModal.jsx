@@ -23,6 +23,7 @@ export default function ManageDeskModal({
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [selectedWriterEmail, setSelectedWriterEmail] = useState('');
   const [assigning, setAssigning] = useState(false);
+  const [confirmRemoveId, setConfirmRemoveId] = useState(null);
 
   // Available writers from demo accounts
   const demoWriters = DEMO_ACCOUNTS.filter((a) => a.role === 'WRITER');
@@ -85,8 +86,7 @@ export default function ManageDeskModal({
     }
   };
 
-  const handleRemoveWriter = async (writerId, writerName) => {
-    if (!confirm(`Remove ${writerName} from ${section.name}?`)) return;
+  const handleRemoveWriter = async (writerId) => {
     setActionLoadingId(writerId);
     try {
       const res = await fetch(`/api/sections/${section.id}/assignments/${writerId}`, {
@@ -96,6 +96,7 @@ export default function ManageDeskModal({
       const json = await res.json();
       if (res.ok) {
         onToast(`Removed writer from ${section.name}`, 'info');
+        setConfirmRemoveId(null);
         fetchAssignments();
       } else {
         onToast(json.message || json.error || 'Failed to remove writer', 'error');
@@ -178,14 +179,32 @@ export default function ManageDeskModal({
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => handleRemoveWriter(writer.id, writer.name)}
-                      disabled={isBusy}
-                      title="Remove from desk"
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition disabled:opacity-50"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {confirmRemoveId === writer.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleRemoveWriter(writer.id)}
+                          disabled={isBusy}
+                          className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-semibold transition"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setConfirmRemoveId(null)}
+                          className="px-1.5 py-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-[10px] transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmRemoveId(writer.id)}
+                        disabled={isBusy}
+                        title="Remove from desk"
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 );
               })

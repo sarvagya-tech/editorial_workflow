@@ -513,8 +513,9 @@ export default function App() {
     setCalendarExportLoading(true);
     try {
       await exportCalendarCsv(token, calendarSectionFilter);
+      setGlobalNotice({ type: 'success', message: 'Editorial release calendar exported to CSV successfully.' });
     } catch (err) {
-      alert(`Export error: ${err.message}`);
+      setGlobalNotice({ type: 'error', message: `Calendar export failed: ${err.message}` });
     } finally {
       setCalendarExportLoading(false);
     }
@@ -605,7 +606,7 @@ export default function App() {
         fetchCalendar(token, calendarSectionFilter),
       ]);
     } catch (err) {
-      alert(`Bulk scheduling failed: ${err.message}`);
+      setGlobalNotice({ type: 'error', message: `Bulk scheduling failed: ${err.message}` });
     } finally {
       setBulkActionLoading(false);
     }
@@ -634,7 +635,7 @@ export default function App() {
         fetchCalendar(token, calendarSectionFilter),
       ]);
     } catch (err) {
-      alert(`Bulk unpublish failed: ${err.message}`);
+      setGlobalNotice({ type: 'error', message: `Bulk unpublish failed: ${err.message}` });
     } finally {
       setBulkActionLoading(false);
     }
@@ -659,7 +660,7 @@ export default function App() {
       setGlobalNotice({ type: 'success', message: `Desk "${json.name}" created successfully.` });
       await fetchSections(token);
     } catch (err) {
-      alert(`Section creation error: ${err.message}`);
+      setGlobalNotice({ type: 'error', message: `Section creation failed: ${err.message}` });
     } finally {
       setCreateSectionLoading(false);
     }
@@ -676,7 +677,7 @@ export default function App() {
       });
       await fetchSections(token);
     } catch (err) {
-      alert(`Desk action error: ${err.message}`);
+      setGlobalNotice({ type: 'error', message: `Desk action failed: ${err.message}` });
     } finally {
       setSectionActionId(null);
     }
@@ -839,7 +840,7 @@ export default function App() {
       });
       await handleOpenArticle(selectedArticle.id);
     } catch (err) {
-      alert(`Revision fork error: ${err.message}`);
+      setGlobalNotice({ type: 'error', message: `Revision creation failed: ${err.message}` });
     } finally {
       setForkingRevision(false);
     }
@@ -853,7 +854,7 @@ export default function App() {
       setArticleComments(details.comments);
       setArticleTimeline(details.timeline);
     } catch (err) {
-      alert(`Comment error: ${err.message}`);
+      setGlobalNotice({ type: 'error', message: `Comment error: ${err.message}` });
     }
   };
 
@@ -1119,12 +1120,20 @@ export default function App() {
       <CommandPalette
         isOpen={showCommandPalette}
         onClose={() => setShowCommandPalette(false)}
+        activeView={activeView}
+        setActiveView={setActiveView}
         onNavigate={(view) => setActiveView(view)}
-        onOpenStory={(article) => handleOpenArticle(article.id)}
-        onOpenCreateStory={handleOpenCreateStoryModal}
-        onSwitchUser={(user) => authenticateUser(user)}
         currentUser={currentUser}
+        onUserSelect={authenticateUser}
+        onSwitchUser={authenticateUser}
+        theme={theme}
+        setTheme={setTheme}
+        onOpenCreateStory={handleOpenCreateStoryModal}
+        onOpenCreateSection={() => setShowCreateSectionModal(true)}
+        onExportCalendarCsv={handleExportCalendarCsv}
         articles={articles}
+        onOpenArticle={handleOpenArticle}
+        onOpenStory={(article) => handleOpenArticle(article.id)}
       />
 
       {/* Keyboard Shortcuts Guide Modal (?) */}
