@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   Menu,
-  Plus,
-  UserCheck,
   Sun,
   Moon,
   RefreshCw,
   Search,
-  Command,
   HelpCircle,
-  Radio,
+  ChevronDown,
 } from 'lucide-react';
 import { DEMO_ACCOUNTS } from '../../constants/accounts';
 
@@ -23,7 +20,6 @@ export default function Header({
   loading,
   mobileMenuOpen,
   setMobileMenuOpen,
-  onOpenCreateStory,
   onOpenCommandPalette,
   onOpenShortcuts,
 }) {
@@ -60,133 +56,124 @@ export default function Header({
   };
 
   return (
-    <header className="bg-white/80 dark:bg-[#0d1322]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-20 h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8 transition-colors duration-200">
-      <div className="flex items-center gap-3">
-        {/* Mobile Menu Toggle */}
+    <header className="bg-white/80 dark:bg-[#0d1322]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 sticky top-0 z-20 h-14 flex items-center justify-between px-4 sm:px-6 lg:px-8 transition-colors duration-200">
+      {/* Left: Mobile Toggle & Clean Breadcrumb */}
+      <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+          className="md:hidden p-1.5 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           aria-label="Toggle mobile menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Breadcrumb / Title */}
-        <div className="flex items-center gap-3">
-          <div>
-            <span className="text-xs text-slate-400 font-medium">Newsroom / </span>
-            <span className="text-sm font-bold text-slate-900 dark:text-white capitalize">
-              {getViewTitle()}
-            </span>
-          </div>
+        <div className="flex items-center gap-2.5 truncate">
+          <span className="text-xs text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">
+            Newsroom
+          </span>
+          <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">/</span>
+          <h1 className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+            {getViewTitle()}
+          </h1>
 
-          {/* Live Edition Ticker Badge */}
-          <div className="hidden xl:flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-slate-800">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-              Edition Live
+          {/* Minimal Live Status Indicator */}
+          <div className="hidden lg:flex items-center gap-1.5 pl-2.5 border-l border-slate-200 dark:border-slate-800 text-[11px] text-slate-400">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <span className="text-[11px] font-mono-code text-slate-400">{timeString}</span>
+            <span className="font-mono-code text-slate-400 dark:text-slate-500">{timeString}</span>
           </div>
         </div>
       </div>
 
-      {/* Quick Search, Demo Switcher, Theme Switcher & Actions */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
-        {/* Spotlight Command Palette Trigger */}
+      {/* Right: Quick Search, Persona Switcher & Utilities */}
+      <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+        {/* Quick Search Spotlight Trigger */}
         <button
           onClick={onOpenCommandPalette}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700/60 rounded-xl transition shadow-xs cursor-pointer"
-          title="Open Command Palette (Ctrl+K or ⌘K)"
+          className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100/70 hover:bg-slate-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/50 rounded-lg transition"
+          title="Search or jump to... (⌘K)"
         >
-          <Search className="w-3.5 h-3.5 text-slate-400" />
-          <span className="hidden md:inline font-medium text-slate-600 dark:text-slate-300">Quick Search...</span>
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono-code font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded shadow-xs">
+          <Search className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline text-xs font-normal">Search...</span>
+          <kbd className="hidden sm:inline-flex items-center text-[10px] font-mono-code font-semibold px-1 py-0.2 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-400">
             ⌘K
           </kbd>
         </button>
 
-        {/* Top Bar Quick Story Button */}
-        <button
-          id="header-new-story-btn"
-          onClick={onOpenCreateStory}
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-sm transition"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>New Story</span>
-        </button>
-
-        {/* Demo User Switcher */}
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl text-xs border border-slate-200/60 dark:border-slate-700/60">
-          <span className="text-slate-500 dark:text-slate-400 px-2 font-medium hidden lg:flex items-center gap-1">
-            <UserCheck className="w-3.5 h-3.5" /> Persona:
-          </span>
+        {/* Minimal User Persona Chip */}
+        <div className="relative flex items-center bg-slate-100/80 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200/60 dark:border-slate-700/50 rounded-lg px-2 py-1 transition">
+          <div className="w-5 h-5 rounded-full bg-slate-900 dark:bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+            {currentUser?.name ? currentUser.name[0] : 'U'}
+          </div>
           <select
             id="demo-user-select"
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-lg px-2.5 py-1 text-slate-800 dark:text-slate-200 font-medium cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs"
+            className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer focus:outline-none pl-1.5 pr-4 py-0 appearance-none"
             value={currentUser.email}
             onChange={(e) => {
               const selected = DEMO_ACCOUNTS.find((a) => a.email === e.target.value);
               if (selected) onUserSelect(selected);
             }}
+            title="Switch staff account"
           >
             {DEMO_ACCOUNTS.map((acc) => (
-              <option key={acc.email} value={acc.email}>
-                {acc.label}
+              <option
+                key={acc.email}
+                value={acc.email}
+                className="bg-white dark:bg-[#111827] text-slate-900 dark:text-slate-100 py-1"
+              >
+                {acc.name} ({acc.role})
               </option>
             ))}
           </select>
+          <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none -ml-3 flex-shrink-0" />
         </div>
 
-        {/* Theme Segmented Switch */}
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-xs">
+        {/* Subtle Divider */}
+        <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+
+        {/* Action Icon Group */}
+        <div className="flex items-center gap-0.5">
+          {/* Single Theme Toggle */}
           <button
-            id="theme-light-btn"
-            onClick={() => setTheme('light')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all ${
-              theme === 'light'
-                ? 'bg-white text-slate-900 shadow-sm font-semibold'
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-            title="Switch to light mode"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            id={theme === 'dark' ? 'theme-light-btn' : 'theme-dark-btn'}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label="Toggle color theme"
           >
-            <Sun className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-[11px] font-medium hidden sm:inline">Light</span>
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400" />
+            ) : (
+              <Moon className="w-4 h-4 text-slate-600" />
+            )}
           </button>
+
+          {/* Keyboard Shortcuts Helper */}
           <button
-            id="theme-dark-btn"
-            onClick={() => setTheme('dark')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-medium transition-all ${
-              theme === 'dark'
-                ? 'bg-slate-900 text-white shadow-sm font-semibold dark:bg-slate-700'
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-            title="Switch to dark mode"
+            onClick={onOpenShortcuts}
+            title="Keyboard shortcuts (?)"
+            className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            aria-label="View keyboard shortcuts"
           >
-            <Moon className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="text-[11px] font-medium hidden sm:inline">Dark</span>
+            <HelpCircle className="w-4 h-4" />
+          </button>
+
+          {/* Refresh Data */}
+          <button
+            id="refresh-btn"
+            onClick={onRefresh}
+            disabled={loading}
+            title="Refresh newsroom data"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
+            aria-label="Refresh newsroom data"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-500' : ''}`}
+            />
           </button>
         </div>
-
-        {/* Shortcuts Helper Button */}
-        <button
-          onClick={onOpenShortcuts}
-          title="Keyboard shortcuts (?)"
-          className="hidden md:flex p-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition shadow-xs"
-        >
-          <HelpCircle className="w-4 h-4" />
-        </button>
-
-        {/* Refresh Button */}
-        <button
-          id="refresh-btn"
-          onClick={onRefresh}
-          disabled={loading}
-          title="Refresh Newsroom Data"
-          className="p-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition shadow-sm disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600 dark:text-emerald-400' : ''}`} />
-        </button>
       </div>
     </header>
   );
