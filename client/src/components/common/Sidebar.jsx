@@ -8,6 +8,7 @@ import {
   FileText,
   FolderKanban,
   Cpu,
+  Compass,
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -165,6 +166,23 @@ export default function Sidebar({
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             30s
           </span>
+        </button>
+
+        {/* 7. Product Overview / Tour */}
+        <button
+          id="nav-landing"
+          onClick={() => setActiveView('landing')}
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+            activeView === 'landing'
+              ? 'bg-slate-900 text-white dark:bg-slate-800 dark:text-white shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/50'
+          }`}
+        >
+          <span className="flex items-center gap-2.5">
+            <Compass className="w-4 h-4 text-emerald-500" />
+            Product Tour
+          </span>
+          <span className="text-[10px] text-slate-400 font-normal">Overview</span>
         </button>
       </nav>
 

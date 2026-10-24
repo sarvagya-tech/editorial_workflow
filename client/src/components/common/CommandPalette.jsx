@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Sparkles,
   Command,
+  Compass,
 } from 'lucide-react';
 import { DEMO_ACCOUNTS } from '../../constants/accounts';
 
@@ -88,6 +89,13 @@ export default function CommandPalette({
       category: 'Navigation',
       icon: Cpu,
       action: () => setActiveView('scheduler'),
+    },
+    {
+      id: 'nav-landing',
+      label: 'View Product Tour & Overview',
+      category: 'Navigation',
+      icon: Compass,
+      action: () => setActiveView('landing'),
     },
   ];
 

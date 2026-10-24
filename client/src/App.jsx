@@ -29,6 +29,7 @@ import {
   exportCalendarCsv,
   getSchedulerStatus,
   triggerSchedulerPublish,
+  registerUser,
 } from './services/api';
 
 // Common Components
@@ -38,6 +39,7 @@ import MobileMenu from './components/common/MobileMenu';
 import Toast from './components/common/Toast';
 
 // Views
+import LandingPageView from './components/views/LandingPageView';
 import DashboardView from './components/views/DashboardView';
 import AlertsView from './components/views/AlertsView';
 import CalendarView from './components/views/CalendarView';
@@ -46,6 +48,7 @@ import SectionsView from './components/views/SectionsView';
 import SchedulerView from './components/views/SchedulerView';
 
 // Modals
+import AuthModal from './components/modals/AuthModal';
 import CreateStoryModal from './components/modals/CreateStoryModal';
 import CreateSectionModal from './components/modals/CreateSectionModal';
 import BulkScheduleModal from './components/modals/BulkScheduleModal';
@@ -75,11 +78,34 @@ export default function App() {
     localStorage.setItem('dispatch_theme', theme);
   }, [theme]);
 
-  // Current session & navigation
-  const [currentUser, setCurrentUser] = useState(DEMO_ACCOUNTS[0]);
-  const [token, setToken] = useState(null);
-  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'alerts' | 'articles' | 'calendar' | 'sections' | 'scheduler'
+  // Current session & navigation (defaults to logged-out for visitors)
+  const [token, setToken] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('dispatch_token') || null;
+    }
+    return null;
+  });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dispatch_user');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
+    return null;
+  });
+
+  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'alerts' | 'articles' | 'calendar' | 'sections' | 'scheduler' | 'landing'
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Authentication & Onboarding Modal
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState('demo');
+  const [authModalError, setAuthModalError] = useState(null);
+  const [authModalLoading, setAuthModalLoading] = useState(false);
 
   // Global Toast / Notice
   const [globalNotice, setGlobalNotice] = useState(null);
@@ -159,6 +185,8 @@ export default function App() {
   // Global Keyboard Shortcuts (Cmd+K, ?, n, d, a, c, s, t)
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (!token || activeView === 'landing') return;
+
       // Command Palette: Cmd+K / Ctrl+K
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -199,20 +227,96 @@ export default function App() {
   }, []);
 
   // ----------------------------------------------------
-  // Authentication
+  // Authentication & Session Management
   // ----------------------------------------------------
   const authenticateUser = useCallback(async (account) => {
     setDashboardLoading(true);
     setDashboardError(null);
     try {
       const data = await loginUser(account.email, 'password123');
+      const userObj = { ...account, ...data.user };
       setToken(data.token);
-      setCurrentUser({ ...account, ...data.user });
+      setCurrentUser(userObj);
+      localStorage.setItem('dispatch_token', data.token);
+      localStorage.setItem('dispatch_user', JSON.stringify(userObj));
+      return data;
     } catch (err) {
       setDashboardError(`Login failed: ${err.message}`);
       setDashboardLoading(false);
+      throw err;
     }
   }, []);
+
+  const handleLogin = async (email, password, demoAccount = null) => {
+    setAuthModalLoading(true);
+    setAuthModalError(null);
+    try {
+      const data = await loginUser(email, password);
+      const matched = demoAccount || DEMO_ACCOUNTS.find((a) => a.email === email) || {
+        label: data.user?.name || email,
+        name: data.user?.name || email,
+        email: email,
+        role: data.user?.role || 'WRITER',
+        desk: data.user?.role === 'EDITOR' ? 'All Desks' : 'General Reporting',
+      };
+      const userObj = { ...matched, ...data.user };
+      setToken(data.token);
+      setCurrentUser(userObj);
+      localStorage.setItem('dispatch_token', data.token);
+      localStorage.setItem('dispatch_user', JSON.stringify(userObj));
+      setShowAuthModal(false);
+      setActiveView('dashboard');
+      setGlobalNotice({
+        type: 'success',
+        message: `Welcome back, ${userObj.name || userObj.label}!`,
+      });
+    } catch (err) {
+      setAuthModalError(err.message || 'Authentication failed');
+    } finally {
+      setAuthModalLoading(false);
+    }
+  };
+
+  const handleRegister = async ({ name, email, password }) => {
+    setAuthModalLoading(true);
+    setAuthModalError(null);
+    try {
+      const data = await registerUser({ name, email, password });
+      const userObj = {
+        label: data.user.name,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role || 'WRITER',
+        desk: 'General Reporting',
+      };
+      setToken(data.token);
+      setCurrentUser(userObj);
+      localStorage.setItem('dispatch_token', data.token);
+      localStorage.setItem('dispatch_user', JSON.stringify(userObj));
+      setShowAuthModal(false);
+      setActiveView('dashboard');
+      setGlobalNotice({
+        type: 'success',
+        message: `Account created! Welcome to The Dispatch, ${name}.`,
+      });
+    } catch (err) {
+      setAuthModalError(err.message || 'Registration failed');
+    } finally {
+      setAuthModalLoading(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    setToken(null);
+    setCurrentUser(null);
+    localStorage.removeItem('dispatch_token');
+    localStorage.removeItem('dispatch_user');
+    setActiveView('dashboard');
+    setGlobalNotice({
+      type: 'success',
+      message: 'You have signed out of The Dispatch workspace.',
+    });
+  };
 
   // ----------------------------------------------------
   // Data Fetchers
@@ -304,9 +408,6 @@ export default function App() {
   // ----------------------------------------------------
   // Initial Auth & State Sync
   // ----------------------------------------------------
-  useEffect(() => {
-    authenticateUser(DEMO_ACCOUNTS[0]);
-  }, [authenticateUser]);
 
   useEffect(() => {
     if (token) {
@@ -756,6 +857,44 @@ export default function App() {
     }
   };
 
+  // ----------------------------------------------------
+  // Render: Public Landing Page for Logged-Out Visitors
+  // or when an authenticated user selects "Product Tour"
+  // ----------------------------------------------------
+  if (!token || activeView === 'landing') {
+    return (
+      <>
+        <LandingPageView
+          theme={theme}
+          setTheme={setTheme}
+          currentUser={currentUser}
+          token={token}
+          onOpenAuthModal={(tab = 'demo') => {
+            setAuthModalTab(tab);
+            setAuthModalError(null);
+            setShowAuthModal(true);
+          }}
+          onNavigateToWorkspace={() => setActiveView('dashboard')}
+          onSignOut={handleSignOut}
+          onQuickDemoLogin={(account) => handleLogin(account.email, 'password123', account)}
+        />
+
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          initialTab={authModalTab}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          loading={authModalLoading}
+          error={authModalError}
+          setError={setAuthModalError}
+        />
+
+        <Toast notice={globalNotice} onDismiss={() => setGlobalNotice(null)} />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 flex font-sans selection:bg-emerald-500 selection:text-white">
       {/* Sidebar Navigation (Desktop) */}
@@ -783,6 +922,8 @@ export default function App() {
           onOpenCreateStory={handleOpenCreateStoryModal}
           onOpenCommandPalette={() => setShowCommandPalette(true)}
           onOpenShortcuts={() => setShowShortcutsModal(true)}
+          onNavigateToLanding={() => setActiveView('landing')}
+          onSignOut={handleSignOut}
         />
 
         {/* Global Toast Notification */}
