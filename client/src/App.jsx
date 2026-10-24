@@ -584,9 +584,11 @@ export default function App() {
   // ----------------------------------------------------
   // Article Detail Modal & Lifecycle Actions
   // ----------------------------------------------------
-  const handleOpenArticle = async (articleId) => {
+  const handleOpenArticle = async (articleId, preserveFeedback = false) => {
     if (!token) return;
-    setWorkflowActionFeedback(null);
+    if (!preserveFeedback) {
+      setWorkflowActionFeedback(null);
+    }
     setShowForkRevisionModal(false);
 
     try {
@@ -610,7 +612,7 @@ export default function App() {
         type: 'success',
         message: 'Story successfully submitted for Editorial Board Review.',
       });
-      await Promise.all([handleOpenArticle(selectedArticle.id), fetchArticles(token), fetchDashboard(token)]);
+      await Promise.all([handleOpenArticle(selectedArticle.id, true), fetchArticles(token), fetchDashboard(token)]);
     } catch (err) {
       setWorkflowActionFeedback({ type: 'error', message: err.message });
     } finally {
@@ -628,7 +630,7 @@ export default function App() {
         type: 'success',
         message: 'Story approved! Ready for immediate publication or scheduled drop.',
       });
-      await Promise.all([handleOpenArticle(selectedArticle.id), fetchArticles(token), fetchDashboard(token)]);
+      await Promise.all([handleOpenArticle(selectedArticle.id, true), fetchArticles(token), fetchDashboard(token)]);
     } catch (err) {
       setWorkflowActionFeedback({ type: 'error', message: err.message });
     } finally {
@@ -647,7 +649,7 @@ export default function App() {
         message: 'Story published live to the Dispatch frontpage!',
       });
       await Promise.all([
-        handleOpenArticle(selectedArticle.id),
+        handleOpenArticle(selectedArticle.id, true),
         fetchArticles(token),
         fetchDashboard(token),
         fetchAlerts(token),
@@ -671,7 +673,7 @@ export default function App() {
         message: `Publication scheduled for ${new Date(scheduleDate).toLocaleString()}.`,
       });
       await Promise.all([
-        handleOpenArticle(selectedArticle.id),
+        handleOpenArticle(selectedArticle.id, true),
         fetchArticles(token),
         fetchDashboard(token),
         fetchAlerts(token),
@@ -695,7 +697,7 @@ export default function App() {
         message: 'Story unpublished and returned to Approved state.',
       });
       await Promise.all([
-        handleOpenArticle(selectedArticle.id),
+        handleOpenArticle(selectedArticle.id, true),
         fetchArticles(token),
         fetchDashboard(token),
         fetchAlerts(token),
@@ -714,7 +716,7 @@ export default function App() {
     try {
       await updateArticleDraft(token, selectedArticle.id, { title, body });
       setWorkflowActionFeedback({ type: 'success', message: 'Draft content updated.' });
-      await handleOpenArticle(selectedArticle.id);
+      await handleOpenArticle(selectedArticle.id, true);
     } catch (err) {
       setWorkflowActionFeedback({ type: 'error', message: err.message });
     }

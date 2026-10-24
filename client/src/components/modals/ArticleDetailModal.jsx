@@ -54,7 +54,15 @@ export default function ArticleDetailModal({
   );
   const [savingDraft, setSavingDraft] = useState(false);
 
-  const [scheduleModalDate, setScheduleModalDate] = useState('');
+  const getDefaultScheduleDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const [scheduleModalDate, setScheduleModalDate] = useState(getDefaultScheduleDate);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
 
   const [unpublishReasonInput, setUnpublishReasonInput] = useState('');
@@ -572,20 +580,58 @@ export default function ArticleDetailModal({
                         </div>
 
                         {showScheduleForm && (
-                          <div className="mt-3 p-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-200 dark:border-indigo-800/60 flex flex-col sm:flex-row gap-2">
-                            <input
-                              type="datetime-local"
-                              value={scheduleModalDate}
-                              onChange={(e) => setScheduleModalDate(e.target.value)}
-                              className="text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            />
-                            <button
-                              onClick={handleScheduleClick}
-                              disabled={!scheduleModalDate || workflowActionLoading}
-                              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-sm transition"
-                            >
-                              Confirm Schedule
-                            </button>
+                          <div className="mt-3 p-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-200 dark:border-indigo-800/60 space-y-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <input
+                                id="schedule-date-input"
+                                type="datetime-local"
+                                value={scheduleModalDate}
+                                onChange={(e) => setScheduleModalDate(e.target.value)}
+                                className="text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                              <button
+                                id="confirm-schedule-btn"
+                                onClick={handleScheduleClick}
+                                disabled={!scheduleModalDate || workflowActionLoading}
+                                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-sm transition"
+                              >
+                                Confirm Schedule
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                              <span className="font-medium">Quick Presets:</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const d = new Date(Date.now() + 3600000 * 2);
+                                  const pad = (n) => String(n).padStart(2, '0');
+                                  setScheduleModalDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                                }}
+                                className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 transition"
+                              >
+                                +2 Hours
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setScheduleModalDate(getDefaultScheduleDate())}
+                                className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 transition"
+                              >
+                                Tomorrow 9 AM
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const d = new Date();
+                                  d.setDate(d.getDate() + 1);
+                                  d.setHours(14, 0, 0, 0);
+                                  const pad = (n) => String(n).padStart(2, '0');
+                                  setScheduleModalDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                                }}
+                                className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 transition"
+                              >
+                                Tomorrow 2 PM
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -625,20 +671,45 @@ export default function ArticleDetailModal({
                         </div>
 
                         {showScheduleForm && (
-                          <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-200 dark:border-indigo-800/60 flex flex-col sm:flex-row gap-2">
-                            <input
-                              type="datetime-local"
-                              value={scheduleModalDate}
-                              onChange={(e) => setScheduleModalDate(e.target.value)}
-                              className="text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            />
-                            <button
-                              onClick={handleScheduleClick}
-                              disabled={!scheduleModalDate || workflowActionLoading}
-                              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-sm transition"
-                            >
-                              Update Schedule
-                            </button>
+                          <div className="p-3 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-xl border border-indigo-200 dark:border-indigo-800/60 space-y-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              <input
+                                id="reschedule-date-input"
+                                type="datetime-local"
+                                value={scheduleModalDate}
+                                onChange={(e) => setScheduleModalDate(e.target.value)}
+                                className="text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-1.5 flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                              <button
+                                id="confirm-reschedule-btn"
+                                onClick={handleScheduleClick}
+                                disabled={!scheduleModalDate || workflowActionLoading}
+                                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-sm transition"
+                              >
+                                Update Schedule
+                              </button>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                              <span className="font-medium">Quick Presets:</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const d = new Date(Date.now() + 3600000 * 3);
+                                  const pad = (n) => String(n).padStart(2, '0');
+                                  setScheduleModalDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                                }}
+                                className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 transition"
+                              >
+                                +3 Hours
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setScheduleModalDate(getDefaultScheduleDate())}
+                                className="px-2 py-0.5 rounded bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-300 transition"
+                              >
+                                Tomorrow 9 AM
+                              </button>
+                            </div>
                           </div>
                         )}
 
