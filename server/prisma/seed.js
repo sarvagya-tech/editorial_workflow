@@ -4,25 +4,31 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('[Seed] Starting digital newsroom database seed ("The Dispatch")...');
+  console.log('[Seed] Starting production-level digital newsroom database seed ("The Dispatch")...');
 
   // 1. Clean slate in reverse dependency order
-  console.log('[Seed] Cleaning existing records...');
-  await prisma.alertDismissal.deleteMany();
-  await prisma.articleComment.deleteMany();
-  await prisma.timelineEvent.deleteMany();
-  
-  // Unlink circular revision pointer on articles before deleting revisions
-  await prisma.article.updateMany({ data: { publishedRevisionId: null } });
-  
-  await prisma.articleRevision.deleteMany();
-  await prisma.article.deleteMany();
-  await prisma.sectionAssignment.deleteMany();
-  await prisma.section.deleteMany();
-  await prisma.user.deleteMany();
+  console.log('[Seed] Purging all existing mock articles, revisions, timelines, and alert dismissals...');
+  try {
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "timeline_events", "article_comments", "alert_dismissals", "article_revisions", "articles", "section_assignments", "sections", "users" CASCADE;'
+    );
+  } catch (truncateErr) {
+    console.log('[Seed] TRUNCATE fallback to trigger toggle:', truncateErr.message);
+    await prisma.$executeRawUnsafe('ALTER TABLE timeline_events DISABLE TRIGGER trg_timeline_immutable;');
+    await prisma.alertDismissal.deleteMany();
+    await prisma.articleComment.deleteMany();
+    await prisma.timelineEvent.deleteMany();
+    await prisma.article.updateMany({ data: { publishedRevisionId: null } });
+    await prisma.articleRevision.deleteMany();
+    await prisma.article.deleteMany();
+    await prisma.sectionAssignment.deleteMany();
+    await prisma.section.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.$executeRawUnsafe('ALTER TABLE timeline_events ENABLE TRIGGER trg_timeline_immutable;');
+  }
 
   // 2. Demo Users
-  console.log('[Seed] Creating demo newsroom accounts (Editors & Writers)...');
+  console.log('[Seed] Provisioning newsroom staff accounts (Editors & Beat Writers)...');
   const passwordHash = await bcrypt.hash('password123', 10);
 
   const editor1 = await prisma.user.create({
@@ -70,12 +76,12 @@ async function main() {
     },
   });
 
-  // 3. Sections & Assignments
-  console.log('[Seed] Creating sections and assignments...');
+  // 3. Sections & Beat Desks
+  console.log('[Seed] Configuring newsroom editorial reporting desks...');
   const secTech = await prisma.section.create({
     data: {
       name: 'Technology & Silicon',
-      description: 'Computing infrastructure, artificial intelligence, semiconductor geopolitics, and enterprise software.',
+      description: 'Computing infrastructure, semiconductor supply chains, artificial intelligence, and enterprise software.',
       ownerEditorId: editor1.id,
     },
   });
@@ -83,7 +89,7 @@ async function main() {
   const secPolitics = await prisma.section.create({
     data: {
       name: 'Politics & Civic Affairs',
-      description: 'Municipal finance, legislative hearings, regulatory policymaking, and statehouse coverage.',
+      description: 'Municipal finance, legislative hearings, antitrust regulatory policymaking, and statehouse coverage.',
       ownerEditorId: editor2.id,
     },
   });
@@ -91,7 +97,7 @@ async function main() {
   const secCulture = await prisma.section.create({
     data: {
       name: 'Culture & Modern Arts',
-      description: 'Independent literary presses, architectural preservation, film critiques, and urban culture.',
+      description: 'Independent literary movements, architectural heritage, urban ecology, and contemporary culture.',
       ownerEditorId: editor1.id,
     },
   });
@@ -99,13 +105,13 @@ async function main() {
   const secInvestigate = await prisma.section.create({
     data: {
       name: 'Investigative Desk',
-      description: 'Long-term investigative reporting, corporate disclosure analysis, and public FOIA investigations.',
+      description: 'Long-term investigative reporting, public records analysis, and critical infrastructure safety audits.',
       ownerEditorId: editor2.id,
     },
   });
 
-  // Soft-archived section (Goal 2)
-  const secArchived = await prisma.section.create({
+  // Soft-archived historical section
+  await prisma.section.create({
     data: {
       name: 'Crypto & Decentralized Web (Archived Desk)',
       description: 'Historical archive of coverage on early DeFi protocols and tokenomics. Read-only.',
@@ -114,43 +120,43 @@ async function main() {
     },
   });
 
-  // Section assignments (Goal 5)
+  // Beat Desk assignments
   await prisma.sectionAssignment.createMany({
     data: [
       { sectionId: secTech.id, writerId: writer1.id, assignedById: editor1.id },
       { sectionId: secPolitics.id, writerId: writer2.id, assignedById: editor2.id },
-      { sectionId: secPolitics.id, writerId: writer1.id, assignedById: editor2.id }, // Maya writes for both Tech & Politics
+      { sectionId: secPolitics.id, writerId: writer1.id, assignedById: editor2.id },
       { sectionId: secCulture.id, writerId: writer3.id, assignedById: editor1.id },
       { sectionId: secInvestigate.id, writerId: writer1.id, assignedById: editor2.id },
       { sectionId: secInvestigate.id, writerId: writer2.id, assignedById: editor2.id },
     ],
   });
 
-  // 4. Articles in Various Lifecycle Stages
-  console.log('[Seed] Creating articles with full lifecycle states and revisions...');
+  // 4. Fresh Production News Stories (5 distinct news items across the 5 lifecycle states)
+  console.log('[Seed] Seeding 5 fresh, high-impact production news stories...');
   const now = new Date();
   const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-  // Article 1: Published with an active newer Revision in Draft (Goal 4)
+  // -------------------------------------------------------------
+  // STORY 1: PUBLISHED (Live Lead Story with replacement revision)
+  // -------------------------------------------------------------
   const art1 = await prisma.article.create({
     data: {
-      title: 'The Hidden Environmental Cost of Hyperscale AI Compute',
-      body: `Behind the soaring valuations of generative AI infrastructure lies an unprecedented physical resource footprint.
+      title: 'Next-Gen Small Modular Reactors Cleared for Hyperscale AI Data Campuses',
+      body: `WASHINGTON — Federal nuclear regulators have granted preliminary site-permitting approval for the nation's first fleet of commercial Small Modular Reactors (SMRs) co-located directly at hyperscale computing campuses across Virginia and Ohio.
 
-Modern megawatt datacenter clusters in Northern Virginia and Phoenix consume upwards of 300 million gallons of evaporative cooling water annually. As regional grid operators struggle with interconnection queues stretching into 2028, municipal utility boards are quietly confronting the trade-offs between clean energy mandates and industrial compute demand.
+The landmark ruling allows modular 300-megawatt light-water reactors to plug directly into behind-the-meter industrial microgrids. The initiative circumvents regional transmission interconnection queues stretching well past 2030, offering compute operators dedicated 24/7 carbon-free baseload power.
 
-Industry consortiums argue that closed-loop cooling and direct-to-chip liquid cooling will mitigate near-term water stress. However, regional watershed authorities warn that aquifer drawdowns near suburban campuses show measurable acceleration.`,
+"This establishes a viable regulatory pathway for clean, uninterrupted compute capacity while insulating residential ratepayer grids from sudden industrial surges," stated NRC leadership during the morning briefing. Regional watershed authorities, however, have requested ongoing monitoring of evaporative cooling thermal discharge into local river basins.`,
       status: ArticleStatus.PUBLISHED,
       sectionId: secTech.id,
       authorId: writer1.id,
-      publishAt: yesterday,
-      publishedAt: yesterday,
+      publishAt: twoHoursAgo,
+      publishedAt: twoHoursAgo,
     },
   });
 
-  // Revision 1 (the published version)
   const rev1 = await prisma.articleRevision.create({
     data: {
       articleId: art1.id,
@@ -159,35 +165,31 @@ Industry consortiums argue that closed-loop cooling and direct-to-chip liquid co
       body: art1.body,
       status: ArticleStatus.PUBLISHED,
       authorId: writer1.id,
-      publishedAt: yesterday,
-      createdAt: new Date(now.getTime() - 48 * 60 * 60 * 1000),
+      publishedAt: twoHoursAgo,
+      createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
     },
   });
 
-  // Link published revision pointer
   await prisma.article.update({
     where: { id: art1.id },
     data: { publishedRevisionId: rev1.id },
   });
 
-  // Revision 2 (Working draft revision proposing EPA updates)
-  const rev2 = await prisma.articleRevision.create({
+  // Working draft revision #2 (demonstrates replacement revision workflow)
+  await prisma.articleRevision.create({
     data: {
       articleId: art1.id,
       revisionNumber: 2,
-      title: 'The Hidden Environmental Cost of Hyperscale AI Compute (Updated with EPA Audit)',
-      body: `Behind the soaring valuations of generative AI infrastructure lies an unprecedented physical resource footprint.
+      title: 'Next-Gen Small Modular Reactors Cleared for Hyperscale AI Data Campuses (Updated with EPA Findings)',
+      body: `${art1.body}
 
-UPDATED REPORTING: Newly unsealed EPA regional audit documents reveal water diversion volumes across three mid-Atlantic facilities exceeded initial projections by 22%.
-
-Modern megawatt datacenter clusters in Northern Virginia and Phoenix consume upwards of 366 million gallons of evaporative cooling water annually. As regional grid operators struggle with interconnection queues stretching into 2028, municipal utility boards are quietly confronting the trade-offs between clean energy mandates and industrial compute demand.`,
+UPDATE: Regional water authorities have released supplementary thermal runoff models projecting a maximum 0.8°C elevation during peak August operating conditions.`,
       status: ArticleStatus.DRAFT,
       authorId: writer1.id,
-      createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+      createdAt: new Date(now.getTime() - 1 * 60 * 60 * 1000),
     },
   });
 
-  // Timeline events for Article 1
   await prisma.timelineEvent.createMany({
     data: [
       {
@@ -196,8 +198,8 @@ Modern megawatt datacenter clusters in Northern Virginia and Phoenix consume upw
         actorName: writer1.name,
         eventType: TimelineEventType.CREATED,
         newStatus: ArticleStatus.DRAFT,
-        description: 'Article initiated by Maya Patel in Draft status',
-        createdAt: new Date(now.getTime() - 48 * 60 * 60 * 1000),
+        description: 'Story drafted by Maya Patel',
+        createdAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
       },
       {
         articleId: art1.id,
@@ -207,7 +209,7 @@ Modern megawatt datacenter clusters in Northern Virginia and Phoenix consume upw
         oldStatus: ArticleStatus.DRAFT,
         newStatus: ArticleStatus.IN_REVIEW,
         description: 'Submitted for editorial review',
-        createdAt: new Date(now.getTime() - 36 * 60 * 60 * 1000),
+        createdAt: new Date(now.getTime() - 18 * 60 * 60 * 1000),
       },
       {
         articleId: art1.id,
@@ -217,7 +219,7 @@ Modern megawatt datacenter clusters in Northern Virginia and Phoenix consume upw
         oldStatus: ArticleStatus.IN_REVIEW,
         newStatus: ArticleStatus.APPROVED,
         description: 'Approved by Sarah Jenkins (editor)',
-        createdAt: new Date(now.getTime() - 26 * 60 * 60 * 1000),
+        createdAt: new Date(now.getTime() - 6 * 60 * 60 * 1000),
       },
       {
         articleId: art1.id,
@@ -226,33 +228,35 @@ Modern megawatt datacenter clusters in Northern Virginia and Phoenix consume upw
         eventType: TimelineEventType.STATUS_CHANGED,
         oldStatus: ArticleStatus.APPROVED,
         newStatus: ArticleStatus.PUBLISHED,
-        description: 'Published immediately to live site as Revision #1',
-        createdAt: yesterday,
+        description: 'Published live as Revision #1',
+        createdAt: twoHoursAgo,
       },
       {
         articleId: art1.id,
         actorId: writer1.id,
         actorName: writer1.name,
         eventType: TimelineEventType.REVISION_OPENED,
-        revisionId: rev2.id,
-        description: 'Opened Revision #2 starting at Draft to incorporate new EPA audit metrics',
-        createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+        description: 'Opened Revision #2 in Draft to incorporate water authority updates',
+        createdAt: new Date(now.getTime() - 1 * 60 * 60 * 1000),
       },
     ],
   });
 
-  // Article 2: OVERDUE SCHEDULED article (Goal 10)
-  // Scheduled for 2 hours in the past, still SCHEDULED!
+  // -------------------------------------------------------------
+  // STORY 2: SCHEDULED (Upcoming Scheduled Drop)
+  // -------------------------------------------------------------
   const art2 = await prisma.article.create({
     data: {
-      title: 'City Council Moves to Sunset $400M Riverfront Stadium Subsidy',
-      body: `Following an acrimonious four-hour closed hearing, the municipal finance subcommittee voted 5-2 to recommend terminating the planned tax-increment financing package for the proposed riverfront arena.
+      title: 'Global Antitrust Taskforce Finalizes Interoperability Standards for Frontier AI Models',
+      body: `BRUSSELS / GENEVA — A multilateral coalition representing 18 international competition authorities will formally publish an unprecedented regulatory accord tomorrow morning, establishing strict interoperability mandates for multi-trillion-parameter AI foundation models.
 
-Civic opposition groups presented independent auditing records indicating that tax revenues from the stadium would fall $120 million short of debt-servicing requirements backed by general revenue bonds.`,
+The draft framework requires proprietary model providers to publish standardized API schema definitions for automated weights export, synthetic benchmark disclosures, and cross-platform context mobility.
+
+European Commissioner Margrethe Vestager and FTC leadership jointly affirmed that proprietary ecosystem lock-in represents an intolerable barrier to fair market contestability. Tier-one enterprise software firms are expected to respond before quarterly earnings calls next week.`,
       status: ArticleStatus.SCHEDULED,
       sectionId: secPolitics.id,
       authorId: writer2.id,
-      publishAt: twoHoursAgo, // Past scheduled time! Triggers Overdue Alert!
+      publishAt: tomorrow,
       scheduleSequence: 1,
     },
   });
@@ -266,7 +270,7 @@ Civic opposition groups presented independent auditing records indicating that t
         eventType: TimelineEventType.CREATED,
         newStatus: ArticleStatus.DRAFT,
         description: 'Draft initiated by James Wilson',
-        createdAt: new Date(now.getTime() - 20 * 60 * 60 * 1000),
+        createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000),
       },
       {
         articleId: art2.id,
@@ -275,8 +279,8 @@ Civic opposition groups presented independent auditing records indicating that t
         eventType: TimelineEventType.STATUS_CHANGED,
         oldStatus: ArticleStatus.DRAFT,
         newStatus: ArticleStatus.IN_REVIEW,
-        description: 'Submitted for editorial review',
-        createdAt: new Date(now.getTime() - 12 * 60 * 60 * 1000),
+        description: 'Submitted for editorial sign-off',
+        createdAt: new Date(now.getTime() - 8 * 60 * 60 * 1000),
       },
       {
         articleId: art2.id,
@@ -286,7 +290,7 @@ Civic opposition groups presented independent auditing records indicating that t
         oldStatus: ArticleStatus.IN_REVIEW,
         newStatus: ArticleStatus.APPROVED,
         description: 'Approved by David Zhao (editor)',
-        createdAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
+        createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
       },
       {
         articleId: art2.id,
@@ -295,19 +299,23 @@ Civic opposition groups presented independent auditing records indicating that t
         eventType: TimelineEventType.SCHEDULED,
         oldStatus: ArticleStatus.APPROVED,
         newStatus: ArticleStatus.SCHEDULED,
-        description: `Scheduled for publication at ${twoHoursAgo.toISOString()}`,
-        createdAt: new Date(now.getTime() - 4 * 60 * 60 * 1000),
+        description: `Scheduled for tomorrow at ${tomorrow.toLocaleString()}`,
+        createdAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
       },
     ],
   });
 
-  // Article 3: In Review with editorial comments (Elena Rostova / Sarah Jenkins)
+  // -------------------------------------------------------------
+  // STORY 3: IN_REVIEW (Major Feature with Editorial Commentary)
+  // -------------------------------------------------------------
   const art3 = await prisma.article.create({
     data: {
-      title: 'The Underground Resurgence of Risograph Print Culture',
-      body: `In an era dominated by ephemeral digital feeds and algorithmic curation, an expanding movement of independent publishers has embraced the imperfect, vibrant textures of stencil duplicators.
+      title: 'Urban Micro-Forestry Initiatives Cut Metropolitan Heat Island Indices by 4.2°C',
+      body: `Across twelve European and North American metropolitan centers, municipal planners are discovering that hyper-dense botanical pocket installations — known as Miyawaki micro-forests — deliver cooling dividends far exceeding conventional urban parklands.
 
-From Berlin to Tokyo, small presses are turning to vintage Risograph machines to distribute limited-edition literary anthologies, investigative pamphlets, and visual essays. The tactile intimacy of spot colors and ink smudges offers a tangible antidote to endless scrolling.`,
+Satellite thermal radiometry conducted by the Copernicus Climate Change Service observed ambient surface temperature reductions averaging 4.2°C across dense urban corridors in Milan, Paris, and Montreal.
+
+The densely packed native saplings achieve canopy closure within 36 months, generating localized microclimates and evaporative cooling effects that curb asphalt heat radiation and capture 300% more stormwater runoff than standard turf grass.`,
       status: ArticleStatus.IN_REVIEW,
       sectionId: secCulture.id,
       authorId: writer3.id,
@@ -318,7 +326,7 @@ From Berlin to Tokyo, small presses are turning to vintage Risograph machines to
     data: {
       articleId: art3.id,
       authorId: editor1.id,
-      content: 'Lyrical opening! Could you add a quick quote from the founder of Berlin’s StencilWorks on their machine maintenance costs?',
+      content: 'Exceptional field reporting, Elena! Could you verify whether municipal public works departments encountered subterranean root interference with municipal conduit lines in Montreal?',
     },
   });
 
@@ -330,7 +338,7 @@ From Berlin to Tokyo, small presses are turning to vintage Risograph machines to
         actorName: writer3.name,
         eventType: TimelineEventType.CREATED,
         newStatus: ArticleStatus.DRAFT,
-        description: 'Created by Elena Rostova',
+        description: 'Draft initiated by Elena Rostova',
         createdAt: new Date(now.getTime() - 8 * 60 * 60 * 1000),
       },
       {
@@ -340,7 +348,7 @@ From Berlin to Tokyo, small presses are turning to vintage Risograph machines to
         eventType: TimelineEventType.STATUS_CHANGED,
         oldStatus: ArticleStatus.DRAFT,
         newStatus: ArticleStatus.IN_REVIEW,
-        description: 'Submitted for editorial sign-off',
+        description: 'Submitted to Editorial Desk for review',
         createdAt: new Date(now.getTime() - 5 * 60 * 60 * 1000),
       },
       {
@@ -354,18 +362,20 @@ From Berlin to Tokyo, small presses are turning to vintage Risograph machines to
     ],
   });
 
-  // Article 4: Approved & Scheduled for Tomorrow
+  // -------------------------------------------------------------
+  // STORY 4: APPROVED (Ready for publication or scheduling)
+  // -------------------------------------------------------------
   const art4 = await prisma.article.create({
     data: {
-      title: 'State Regulators Greenlight Interstate 80 Autonomous Freight Corridor',
-      body: `Commercial driverless long-haul freight operations will formally commence along a 400-mile stretch of Interstate 80 starting next quarter.
+      title: 'Federal Rail Commission Mandates Ultrasonic Sensor Grids on Freight Corridors',
+      body: `Following an exhaustive sixteen-month investigation into hazardous chemical transport derailments, federal transportation authorities will require Class I freight operators to install wayside ultrasonic bearing acoustic monitors every 12 miles along mainline tracks.
 
-Transportation safety officials highlighted mandatory redundant braking protocols and geofenced weather shutdowns. Teamsters representatives voiced fierce opposition, pledging legislative challenges regarding job displacement.`,
-      status: ArticleStatus.SCHEDULED,
-      sectionId: secTech.id,
-      authorId: writer1.id,
-      publishAt: tomorrow,
-      scheduleSequence: 1,
+The Dispatch reviewed non-public inspection logs revealing that legacy infrared defect detectors failed to alert train crews to overheated axle bearings in 34% of documented thermal failure incidents over the prior three years.
+
+Rail carrier trade associations initially lobbied against the $840 million capital rollout, but accepted the binding administrative timetable following Congressional oversight hearings.`,
+      status: ArticleStatus.APPROVED,
+      sectionId: secInvestigate.id,
+      authorId: writer2.id,
     },
   });
 
@@ -373,20 +383,22 @@ Transportation safety officials highlighted mandatory redundant braking protocol
     data: [
       {
         articleId: art4.id,
-        actorId: writer1.id,
-        actorName: writer1.name,
+        actorId: writer2.id,
+        actorName: writer2.name,
         eventType: TimelineEventType.CREATED,
         newStatus: ArticleStatus.DRAFT,
-        description: 'Created by Maya Patel',
+        description: 'Investigative draft created by James Wilson',
+        createdAt: new Date(now.getTime() - 16 * 60 * 60 * 1000),
       },
       {
         articleId: art4.id,
-        actorId: writer1.id,
-        actorName: writer1.name,
+        actorId: writer2.id,
+        actorName: writer2.name,
         eventType: TimelineEventType.STATUS_CHANGED,
         oldStatus: ArticleStatus.DRAFT,
         newStatus: ArticleStatus.IN_REVIEW,
-        description: 'Submitted for review',
+        description: 'Submitted for editorial sign-off',
+        createdAt: new Date(now.getTime() - 10 * 60 * 60 * 1000),
       },
       {
         articleId: art4.id,
@@ -395,147 +407,57 @@ Transportation safety officials highlighted mandatory redundant braking protocol
         eventType: TimelineEventType.STATUS_CHANGED,
         oldStatus: ArticleStatus.IN_REVIEW,
         newStatus: ArticleStatus.APPROVED,
-        description: 'Approved by Sarah Jenkins',
-      },
-      {
-        articleId: art4.id,
-        actorId: editor1.id,
-        actorName: editor1.name,
-        eventType: TimelineEventType.SCHEDULED,
-        oldStatus: ArticleStatus.APPROVED,
-        newStatus: ArticleStatus.SCHEDULED,
-        description: `Scheduled for tomorrow at ${tomorrow.toLocaleString()}`,
+        description: 'Approved by Editor Sarah Jenkins',
+        createdAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
       },
     ],
   });
 
-  // Article 5: Open Draft
+  // -------------------------------------------------------------
+  // STORY 5: DRAFT (Active Working Reporter Copy)
+  // -------------------------------------------------------------
   const art5 = await prisma.article.create({
     data: {
-      title: 'Ghost Contractors in Municipal Road Maintenance Allocations',
-      body: `Preliminary audit documents reveal millions in annual municipal paving allocations disbursed to corporate entities with nonexistent equipment yards.`,
+      title: 'Deep-Sea Extraction Consortium Delays Pacific Clarion-Clipperton Mining Trials',
+      body: `KINGSTON, JAMAICA — A multinational mining consortium backed by leading battery manufacturers has quietly postponed its planned deep-ocean polymetallic nodule harvesting trials in the central Pacific until late 2027.
+
+Confidential briefing memorandums obtained by The Dispatch indicate environmental assessment trials conducted 4,000 meters beneath the surface triggered persistent benthic sediment plumes that traveled three times farther than computational dispersion models predicted.
+
+International Seabed Authority delegates meeting in Kingston are preparing to introduce a formal moratorium resolution during the upcoming plenary session.`,
       status: ArticleStatus.DRAFT,
-      sectionId: secInvestigate.id,
-      authorId: writer2.id,
+      sectionId: secTech.id,
+      authorId: writer1.id,
     },
   });
 
   await prisma.timelineEvent.create({
     data: {
       articleId: art5.id,
-      actorId: writer2.id,
-      actorName: writer2.name,
+      actorId: writer1.id,
+      actorName: writer1.name,
       eventType: TimelineEventType.CREATED,
       newStatus: ArticleStatus.DRAFT,
-      description: 'Draft initiated by James Wilson',
+      description: 'Draft initiated by Maya Patel',
+      createdAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
     },
   });
 
-  // Article 6: Case demonstrating Alert Dismissal tied to a scheduleSequence!
-  // Scheduled, overdue, dismissed for sequence 1.
-  const art6 = await prisma.article.create({
-    data: {
-      title: 'Regional Housing Commission Publishes Revised Inclusionary Zoning Rules',
-      body: `New guidelines will require multifamily residential developers to allocate 18% of units to low-income households.`,
-      status: ArticleStatus.SCHEDULED,
-      sectionId: secPolitics.id,
-      authorId: writer2.id,
-      publishAt: twoHoursAgo,
-      scheduleSequence: 1,
-    },
-  });
-
-  // Editor dismissed overdue alert for scheduleSequence 1
-  await prisma.alertDismissal.create({
-    data: {
-      articleId: art6.id,
-      scheduleSequence: 1,
-      dismissedById: editor2.id,
-      dismissedAt: new Date(now.getTime() - 1 * 60 * 60 * 1000),
-    },
-  });
-
-  // 5. Historical Published Articles over the last 8 weeks (for Dashboard Trend Chart - Goal 8)
-  console.log('[Seed] Generating historical published articles across last 8 weeks...');
-  const historicalArticles = [
-    { title: 'The Fall of Monolithic Software in Enterprise Finance', weeksAgo: 1, sec: secTech, author: writer1 },
-    { title: 'Public Transit Funding Gap Sparks Capitol Hill Debate', weeksAgo: 2, sec: secPolitics, author: writer2 },
-    { title: 'Inside the Revival of Heritage Architectural Brickmaking', weeksAgo: 3, sec: secCulture, author: writer3 },
-    { title: 'Semiconductor Fabrication Subsidies: One Year Later', weeksAgo: 4, sec: secTech, author: writer1 },
-    { title: 'Suburban Water Quality Violations Go Unreported in State Records', weeksAgo: 5, sec: secInvestigate, author: writer2 },
-    { title: 'Independent Bookstores Outperform Chain Retailers in Q2', weeksAgo: 6, sec: secCulture, author: writer3 },
-    { title: 'Clean Grid Transmission Line Permits Stalled at County Level', weeksAgo: 7, sec: secPolitics, author: writer2 },
-  ];
-
-  for (const hist of historicalArticles) {
-    const pubDate = new Date(now.getTime() - hist.weeksAgo * 7 * 24 * 60 * 60 * 1000);
-    const createdDate = new Date(pubDate.getTime() - 48 * 60 * 60 * 1000);
-
-    const art = await prisma.article.create({
-      data: {
-        title: hist.title,
-        body: `Full reporting on ${hist.title.toLowerCase()} published as part of The Dispatch's weekly editorial coverage.`,
-        status: ArticleStatus.PUBLISHED,
-        sectionId: hist.sec.id,
-        authorId: hist.author.id,
-        publishAt: pubDate,
-        publishedAt: pubDate,
-        createdAt: createdDate,
-      },
-    });
-
-    const rev = await prisma.articleRevision.create({
-      data: {
-        articleId: art.id,
-        revisionNumber: 1,
-        title: art.title,
-        body: art.body,
-        status: ArticleStatus.PUBLISHED,
-        authorId: hist.author.id,
-        publishedAt: pubDate,
-        createdAt: createdDate,
-      },
-    });
-
-    await prisma.article.update({
-      where: { id: art.id },
-      data: { publishedRevisionId: rev.id },
-    });
-
-    await prisma.timelineEvent.createMany({
-      data: [
-        {
-          articleId: art.id,
-          actorId: hist.author.id,
-          actorName: hist.author.name,
-          eventType: TimelineEventType.CREATED,
-          newStatus: ArticleStatus.DRAFT,
-          description: 'Draft initiated',
-          createdAt: createdDate,
-        },
-        {
-          articleId: art.id,
-          actorId: editor1.id,
-          actorName: editor1.name,
-          eventType: TimelineEventType.STATUS_CHANGED,
-          oldStatus: ArticleStatus.APPROVED,
-          newStatus: ArticleStatus.PUBLISHED,
-          description: 'Published on schedule',
-          createdAt: pubDate,
-        },
-      ],
-    });
-  }
-
-  console.log('[Seed] Database successfully populated!');
+  console.log('[Seed] Database successfully populated with 5 fresh production stories!');
   console.log('----------------------------------------------------');
-  console.log('Demo Credentials for Reviewers:');
+  console.log('Production News Stories Seeded:');
+  console.log(`  1. [PUBLISHED]  ${art1.title}`);
+  console.log(`  2. [SCHEDULED]  ${art2.title}`);
+  console.log(`  3. [IN_REVIEW]  ${art3.title}`);
+  console.log(`  4. [APPROVED]   ${art4.title}`);
+  console.log(`  5. [DRAFT]      ${art5.title}`);
+  console.log('----------------------------------------------------');
+  console.log('Staff Credentials:');
   console.log('  Managing Editor : editor@dispatch.com       (Sarah Jenkins)');
   console.log('  Senior Editor   : david.editor@dispatch.com (David Zhao)');
-  console.log('  Tech Writer     : writer@dispatch.com       (Maya Patel)');
-  console.log('  Civic Writer    : james.writer@dispatch.com (James Wilson)');
-  console.log('  Culture Writer  : elena.writer@dispatch.com (Elena Rostova)');
-  console.log('  Password        : password123 (for all accounts)');
+  console.log('  Tech Reporter   : writer@dispatch.com       (Maya Patel)');
+  console.log('  Civic Reporter  : james.writer@dispatch.com (James Wilson)');
+  console.log('  Culture Reporter: elena.writer@dispatch.com (Elena Rostova)');
+  console.log('  Password        : password123');
   console.log('----------------------------------------------------');
 }
 

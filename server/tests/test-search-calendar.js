@@ -132,15 +132,15 @@ async function runTests() {
     console.log('[Test Group 1: Server-Side Search]');
 
     // 1. Search matches title
-    const titleSearchRes = await request('/api/articles?q=Environmental', {
+    const titleSearchRes = await request('/api/articles?q=Modular', {
       headers: { Authorization: `Bearer ${editorToken}` },
     });
     assert(titleSearchRes.status === 200, 'Search by title responds 200 OK');
     const titleResults = getPayload(titleSearchRes);
     assert(titleResults.length >= 1, 'Search matches article title keyword');
     assert(
-      titleResults.some((a) => a.title.toLowerCase().includes('environmental')),
-      'Result title contains searched keyword "Environmental"'
+      titleResults.some((a) => a.title.toLowerCase().includes('modular')),
+      'Result title contains searched keyword "Modular"'
     );
 
     // 2. Search matches body copy
@@ -151,7 +151,7 @@ async function runTests() {
     const bodyResults = getPayload(bodySearchRes);
     assert(bodyResults.length >= 1, 'Search matches term present only in body copy ("evaporative")');
     assert(
-      bodyResults.some((a) => a.title.includes('Environmental')),
+      bodyResults.some((a) => a.title.includes('Micro-Forestry')),
       'Article containing "evaporative" in body is discovered'
     );
 
@@ -177,7 +177,7 @@ async function runTests() {
     assert(specialCharsRes.status === 200, 'Special characters (%_\'"&[]) handled safely without error');
 
     // 6. Combined search and filters
-    const combinedRes = await request(`/api/articles?q=Environmental&sectionId=${techSection.id}&status=PUBLISHED`, {
+    const combinedRes = await request(`/api/articles?q=Modular&sectionId=${techSection.id}&status=PUBLISHED`, {
       headers: { Authorization: `Bearer ${editorToken}` },
     });
     assert(combinedRes.status === 200, 'Combined search (q + sectionId + status) responds 200 OK');

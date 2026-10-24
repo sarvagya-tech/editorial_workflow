@@ -123,13 +123,63 @@ async function runVerification() {
     // 6. Verify Overdue Publication Alerts & Schedule Sequence
     console.log('\n[Test Group 5: Overdue Publication Alerts]');
     const now = new Date();
-    const overdueArticles = await prisma.article.findMany({
+    let overdueArticles = await prisma.article.findMany({
       where: {
         status: ArticleStatus.SCHEDULED,
         publishAt: { lt: now },
       },
       include: { alertDismissals: true },
     });
+
+    let tempTestAlertId = null;
+    let tempDismissedAlertId = null;
+
+    if (overdueArticles.length === 0) {
+      const sec = await prisma.section.findFirst({ where: { isArchived: false } });
+      const writer = await prisma.user.findFirst({ where: { role: Role.WRITER } });
+      const editor = await prisma.user.findFirst({ where: { role: Role.EDITOR } });
+      const testArt1 = await prisma.article.create({
+        data: {
+          title: 'Automated Check: Overdue Scheduled Release',
+          body: 'Test verification fixture for overdue publication alert detection.',
+          status: ArticleStatus.SCHEDULED,
+          sectionId: sec.id,
+          authorId: writer.id,
+          publishAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+          scheduleSequence: 1,
+        },
+      });
+      tempTestAlertId = testArt1.id;
+
+      const testArt2 = await prisma.article.create({
+        data: {
+          title: 'Automated Check: Dismissed Overdue Release',
+          body: 'Test verification fixture for dismissed alert sequence matching.',
+          status: ArticleStatus.SCHEDULED,
+          sectionId: sec.id,
+          authorId: writer.id,
+          publishAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
+          scheduleSequence: 1,
+        },
+      });
+      tempDismissedAlertId = testArt2.id;
+      await prisma.alertDismissal.create({
+        data: {
+          articleId: testArt2.id,
+          scheduleSequence: 1,
+          dismissedById: editor.id,
+          dismissedAt: now,
+        },
+      });
+
+      overdueArticles = await prisma.article.findMany({
+        where: {
+          status: ArticleStatus.SCHEDULED,
+          publishAt: { lt: now },
+        },
+        include: { alertDismissals: true },
+      });
+    }
 
     assert(overdueArticles.length >= 1, 'Overdue scheduled articles identified');
 
@@ -150,6 +200,15 @@ async function runVerification() {
 
     assert(!!activeOverdue, 'Active overdue alert triggers count badge in navigation');
     assert(!!dismissedOverdue, 'Dismissed overdue alert suppressed for matching scheduleSequence');
+
+    // Clean up temporary check fixtures if created
+    if (tempDismissedAlertId) {
+      await prisma.alertDismissal.deleteMany({ where: { articleId: tempDismissedAlertId } });
+      await prisma.article.delete({ where: { id: tempDismissedAlertId } });
+    }
+    if (tempTestAlertId) {
+      await prisma.article.delete({ where: { id: tempTestAlertId } });
+    }
 
     // 7. Verify Editorial Calendar CSV Data Availability
     console.log('\n[Test Group 6: Editorial Calendar Data]');
