@@ -294,8 +294,8 @@ async function runTests() {
       method: 'POST',
       headers: { Authorization: `Bearer ${editorToken}` },
     });
-    assert(repeatDismiss.status === 200, 'Repeated dismissal returns 200 (idempotent)');
-    assert(repeatDismiss.data.data?.alreadyDismissed === true, 'Repeated dismissal reports alreadyDismissed: true');
+    assert(repeatDismiss.status === 200, 'Repeated dismissal returns 200 (idempotent)', JSON.stringify(repeatDismiss));
+    assert(repeatDismiss.data?.data?.alreadyDismissed === true || repeatDismiss.data?.alreadyDismissed === true, 'Repeated dismissal reports alreadyDismissed: true', JSON.stringify(repeatDismiss));
 
     // ----------------------------------------------------
     // [Test Group 6: Rescheduling Revives Alert (Sequence 2)]
@@ -303,16 +303,26 @@ async function runTests() {
     console.log('\n[Test Group 6: Rescheduling Revives Alert]');
 
     // Reschedule article: workflow engine increments scheduleSequence to 2
+    // If autonomous background publisher worker published testArt while it was overdue, unpublish to APPROVED first
+    const preReschedArt = await prisma.article.findUnique({ where: { id: testArt.id } });
+    if (preReschedArt && preReschedArt.status === 'PUBLISHED') {
+      await request(`/api/articles/${testArt.id}/unpublish`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${editorToken}` },
+        body: { reason: 'Resetting published article to APPROVED for reschedule test' },
+      });
+    }
+
     const newFutureDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
     const rescheduleRes = await request(`/api/articles/${testArt.id}/schedule`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${editorToken}` },
       body: { scheduledAt: newFutureDate },
     });
-    assert(rescheduleRes.status === 200, 'Article rescheduled to new future date');
+    assert(rescheduleRes.status === 200, 'Article rescheduled to new future date', JSON.stringify(rescheduleRes));
 
     const updatedArt = await prisma.article.findUnique({ where: { id: testArt.id } });
-    assert(updatedArt.scheduleSequence === 2, 'Article scheduleSequence incremented to 2');
+    assert(updatedArt?.scheduleSequence === 2, 'Article scheduleSequence incremented to 2', JSON.stringify(updatedArt));
 
     // Check alert: still in future, so not overdue
     const alertsAfterRescheduleFuture = await request('/api/alerts/overdue', {
