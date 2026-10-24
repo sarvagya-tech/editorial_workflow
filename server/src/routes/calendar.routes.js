@@ -1,54 +1,15 @@
+// server/src/routes/calendar.routes.js
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
-import * as calendarService from '../services/calendar.service.js';
+import * as calendarController from '../controllers/calendar.controller.js';
 
 const router = Router();
 
 // All calendar endpoints require authentication
 router.use(authenticate);
 
-/**
- * GET /api/calendar/export.csv
- * Export scheduled and published articles as a secure, sanitized CSV file.
- */
-async function handleExportCsv(req, res, next) {
-  try {
-    const { from, to, sectionId } = req.query;
-    const csvData = await calendarService.exportCalendarCsv({
-      from,
-      to,
-      sectionId,
-      user: req.user,
-    });
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="editorial-calendar.csv"');
-    res.status(200).send(csvData);
-  } catch (error) {
-    next(error);
-  }
-}
-
-router.get('/', async (req, res, next) => {
-  try {
-    const { from, to, sectionId } = req.query;
-    const articles = await calendarService.getCalendarArticles({
-      from,
-      to,
-      sectionId,
-      user: req.user,
-    });
-    res.status(200).json({
-      success: true,
-      data: articles,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/export.csv', handleExportCsv);
-router.get('/export', handleExportCsv);
-
+router.get('/', calendarController.getCalendarArticles);
+router.get('/export.csv', calendarController.exportCalendarCsv);
+router.get('/export', calendarController.exportCalendarCsv);
 
 export default router;

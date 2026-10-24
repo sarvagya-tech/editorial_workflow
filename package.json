@@ -16,6 +16,16 @@
     "prisma:seed": "npm --prefix server run prisma:seed",
     "prisma:studio": "npm --prefix server run prisma:studio",
     "test": "npm --prefix server run test",
+    "test:db": "npm --prefix server run test:db",
+    "test:auth": "npm --prefix server run test:auth",
+    "test:sections": "npm --prefix server run test:sections",
+    "test:articles": "npm --prefix server run test:articles",
+    "test:workflow": "npm --prefix server run test:workflow",
+    "test:search": "npm --prefix server run test:search",
+    "test:bulk": "npm --prefix server run test:bulk",
+    "test:dashboard": "npm --prefix server run test:dashboard",
+    "test:alerts": "npm --prefix server run test:alerts",
+    "test:scheduled": "npm --prefix server run test:scheduled",
     "test:all": "npm --prefix server run test:all"
   },
   "devDependencies": {

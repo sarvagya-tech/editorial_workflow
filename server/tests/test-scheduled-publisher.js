@@ -1,15 +1,15 @@
 import 'dotenv/config';
 process.env.NODE_ENV = 'test';
 import http from 'http';
-import { prisma } from './src/prisma.js';
-import { config } from './src/config/index.js';
+import { prisma } from '../src/prisma.js';
+import { config } from '../src/config/index.js';
 import {
   processDueScheduledArticles,
   getDatabaseClock,
   getSchedulerStatus,
-} from './src/workers/scheduler.worker.js';
-import { publishArticle, SYSTEM_ACTOR } from './src/services/workflow.service.js';
-const { default: app } = await import('./src/index.js');
+} from '../src/workers/scheduler.worker.js';
+import { publishArticle, SYSTEM_ACTOR } from '../src/services/workflow.service.js';
+const { default: app } = await import('../src/index.js');
 
 let server;
 let baseUrl;

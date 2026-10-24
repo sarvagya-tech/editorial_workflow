@@ -62,16 +62,16 @@ All 10 test suites were executed against the live database with zero baseline fa
 
 | Phase | Test Suite File | Checks Passed | Coverage Area |
 | :--- | :--- | :---: | :--- |
-| **Phase 1** | `test-db-verification.js` | **16 / 16** | Schema normalization, compound indexes, immutability trigger |
-| **Phase 2** | `test-auth.js` | **25 / 25** | Login, JWT, profile scoping, privilege escalation prevention |
-| **Phase 3** | `test-sections.js` | **34 / 34** | Section CRUD, archiving, writer assignments, privacy |
-| **Phase 4** | `test-articles.js` | **45 / 45** | Article CRUD, revision numbering, timeline logging, comments |
-| **Phase 5** | `test-workflow.js` | **57 / 57** | State machine, self-approval prevention, optimistic locking |
-| **Phase 6** | `test-search-calendar.js` | **55 / 55** | Full-text search, filters, pagination, CSV formula mitigation |
-| **Phase 7** | `test-bulk-workflow.js` | **57 / 57** | Bulk scheduling, bulk unpublishing, atomic batch reporting |
-| **Phase 8** | `test-dashboard.js` | **45 / 45** | 8-week date math, KPI calculations, role-based scoping |
-| **Phase 9** | `test-alerts.js` | **56 / 56** | Overdue detection, sequence-based dismissals, re-arming |
-| **Phase 10** | `test-scheduled-publisher.js` | **54 / 54** | Due/future articles, sequence validation, concurrency, cron security |
+| **Phase 1** | `tests/test-db-verification.js` | **16 / 16** | Schema normalization, compound indexes, immutability trigger |
+| **Phase 2** | `tests/test-auth.js` | **25 / 25** | Login, JWT, profile scoping, privilege escalation prevention |
+| **Phase 3** | `tests/test-sections.js` | **34 / 34** | Section CRUD, archiving, writer assignments, privacy |
+| **Phase 4** | `tests/test-articles.js` | **45 / 45** | Article CRUD, revision numbering, timeline logging, comments |
+| **Phase 5** | `tests/test-workflow.js` | **57 / 57** | State machine, self-approval prevention, optimistic locking |
+| **Phase 6** | `tests/test-search-calendar.js` | **55 / 55** | Full-text search, filters, pagination, CSV formula mitigation |
+| **Phase 7** | `tests/test-bulk-workflow.js` | **57 / 57** | Bulk scheduling, bulk unpublishing, atomic batch reporting |
+| **Phase 8** | `tests/test-dashboard.js` | **45 / 45** | 8-week date math, KPI calculations, role-based scoping |
+| **Phase 9** | `tests/test-alerts.js` | **56 / 56** | Overdue detection, sequence-based dismissals, re-arming |
+| **Phase 10** | `tests/test-scheduled-publisher.js` | **54 / 54** | Due/future articles, sequence validation, concurrency, cron security |
 | **Total** | **All 10 Verification Suites** | **444 / 444 (100%)** | Complete end-to-end integration coverage |
 
 ---

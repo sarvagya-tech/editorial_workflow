@@ -1,11 +1,8 @@
+// server/src/routes/cron.routes.js
 import crypto from 'crypto';
 import express from 'express';
 import { config } from '../config/index.js';
-import {
-  processDueScheduledArticles,
-  runSchedulerCycle,
-  getSchedulerStatus,
-} from '../workers/scheduler.worker.js';
+import * as cronController from '../controllers/cron.controller.js';
 
 const router = express.Router();
 
@@ -49,41 +46,8 @@ export function requireCronSecret(req, res, next) {
   next();
 }
 
-/**
- * POST /api/internal/cron/publish
- * Triggered by external cron runners (Vercel Cron, GitHub Actions, AWS EventBridge, Render Cron)
- * or manual administrative triggers.
- */
-router.post('/publish', requireCronSecret, async (req, res, next) => {
-  try {
-    const batchSize = req.body?.batchSize ? parseInt(req.body.batchSize, 10) : undefined;
-    const result = await processDueScheduledArticles({ batchSize });
-
-    res.status(200).json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('[Cron API] Unexpected error executing scheduled publishing trigger:', error.message);
-    res.status(500).json({
-      success: false,
-      error: 'Scheduled publishing execution encountered an internal error.',
-    });
-  }
-});
-
-/**
- * GET /api/internal/cron/status
- * Operational health check and status reporting for the scheduled publishing subsystem.
- */
-router.get('/status', requireCronSecret, (req, res) => {
-  const status = getSchedulerStatus();
-  res.status(200).json({
-    success: true,
-    data: status,
-    timestamp: new Date().toISOString(),
-  });
-});
+// Internal scheduled publisher cron endpoints
+router.post('/publish', requireCronSecret, cronController.triggerScheduledPublish);
+router.get('/status', requireCronSecret, cronController.getStatus);
 
 export default router;
