@@ -3,6 +3,16 @@
 
 import { CRON_SECRET } from '../constants/status';
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
+// Transparently prefix /api endpoints with VITE_API_URL when deploying to Vercel + Render
+const fetch = (input, init) => {
+  if (typeof input === 'string' && input.startsWith('/api') && API_BASE) {
+    return window.fetch(`${API_BASE}${input}`, init);
+  }
+  return window.fetch(input, init);
+};
+
 /**
  * Authentication
  */

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: editorial-workflow-backend
+    env: node
+    rootDir: server
+    buildCommand: npm install && npx prisma generate
+    startCommand: node src/index.js
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        value: dispatch-internal-cron-secret-2026
+      - key: ENABLE_SCHEDULER_WORKER
+        value: "true"
+      - key: SCHEDULER_INTERVAL_MS
+        value: "30000"
