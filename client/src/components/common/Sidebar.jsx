@@ -7,9 +7,9 @@ import {
   Calendar,
   FileText,
   FolderKanban,
-  Cpu,
   LogOut,
   ChevronRight,
+  Activity,
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -19,6 +19,7 @@ export default function Sidebar({
   currentUser,
   onOpenCreateStory,
   onSignOut,
+  onOpenSystemHealth,
 }) {
   const isEditor = currentUser?.role === 'EDITOR';
 
@@ -61,18 +62,6 @@ export default function Sidebar({
           label: 'Desks & Beats',
           icon: FolderKanban,
           badge: null,
-        },
-      ],
-    },
-    {
-      title: 'Infrastructure',
-      items: [
-        {
-          id: 'scheduler',
-          label: 'Cron Scheduler',
-          icon: Cpu,
-          badgeText: '30s',
-          isLivePulse: true,
         },
       ],
     },
@@ -172,26 +161,7 @@ export default function Sidebar({
                       </span>
                     )}
 
-                    {item.badgeText && (
-                      <span
-                        className={`flex items-center gap-1.5 text-[10px] font-mono-code font-bold px-2 py-0.5 rounded-full ${
-                          isActive
-                            ? 'bg-white/20 text-white'
-                            : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60'
-                        }`}
-                      >
-                        {item.isLivePulse && (
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              isActive ? 'bg-white' : 'bg-emerald-500'
-                            } animate-pulse`}
-                          />
-                        )}
-                        {item.badgeText}
-                      </span>
-                    )}
-
-                    {isActive && !item.badge && !item.badgeText && (
+                    {isActive && !item.badge && (
                       <ChevronRight className="w-3.5 h-3.5 text-white/70" />
                     )}
                   </button>
@@ -203,7 +173,7 @@ export default function Sidebar({
       </nav>
 
       {/* Enhanced Sidebar Footer — User Persona Card */}
-      <div className="p-3.5 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/70 dark:bg-slate-900/40">
+      <div className="p-3.5 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
         <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white dark:bg-[#111827] border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex items-center gap-2.5 min-w-0">
             <div
@@ -247,6 +217,20 @@ export default function Sidebar({
             </button>
           )}
         </div>
+
+        {/* Subtle System Health link for Editors */}
+        {isEditor && onOpenSystemHealth && (
+          <button
+            onClick={onOpenSystemHealth}
+            className="w-full py-1 px-2 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition flex items-center justify-between rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50"
+          >
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>System Diagnostics</span>
+            </span>
+            <Activity className="w-3 h-3 text-slate-400" />
+          </button>
+        )}
       </div>
     </aside>
   );

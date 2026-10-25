@@ -1,11 +1,9 @@
-import React from 'react';
 import {
   LayoutDashboard,
   AlertTriangle,
   Calendar,
   FileText,
   FolderKanban,
-  Cpu,
 } from 'lucide-react';
 
 export default function MobileMenu({
@@ -84,17 +82,6 @@ export default function MobileMenu({
         }`}
       >
         <FolderKanban className="w-4 h-4" /> Desks
-      </button>
-
-      <button
-        onClick={() => navigateTo('scheduler')}
-        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold ${
-          activeView === 'scheduler'
-            ? 'bg-slate-900 text-white dark:bg-slate-800'
-            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-        }`}
-      >
-        <Cpu className="w-4 h-4 text-emerald-500" /> Cron Engine
       </button>
     </div>
   );

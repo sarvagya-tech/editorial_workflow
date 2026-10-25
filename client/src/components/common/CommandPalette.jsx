@@ -36,6 +36,7 @@ export default function CommandPalette({
   articles = [],
   onOpenArticle,
   onOpenStory,
+  onOpenSystemHealth,
 }) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -101,20 +102,6 @@ export default function CommandPalette({
       icon: AlertTriangle,
       action: () => navigate('alerts'),
     },
-    {
-      id: 'nav-scheduler',
-      label: 'Go to Autonomous Scheduler Engine',
-      category: 'Navigation',
-      icon: Cpu,
-      action: () => navigate('scheduler'),
-    },
-    {
-      id: 'nav-landing',
-      label: 'View Product Tour & Overview',
-      category: 'Navigation',
-      icon: Compass,
-      action: () => navigate('landing'),
-    },
   ];
 
   const actionItems = [
@@ -132,6 +119,18 @@ export default function CommandPalette({
       : []),
     ...(currentUser?.role === 'EDITOR'
       ? [
+          ...(onOpenSystemHealth
+            ? [
+                {
+                  id: 'act-system-health',
+                  label: 'System Health & Worker Diagnostics',
+                  category: 'System',
+                  icon: Cpu,
+                  badge: 'Admin',
+                  action: () => onOpenSystemHealth(),
+                },
+              ]
+            : []),
           ...(onOpenCreateSection
             ? [
                 {

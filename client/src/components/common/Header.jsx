@@ -25,6 +25,7 @@ export default function Header({
   onOpenShortcuts,
   onNavigateToLanding,
   onSignOut,
+  onOpenSystemHealth,
 }) {
   const [timeString, setTimeString] = useState('');
 
@@ -51,8 +52,6 @@ export default function Header({
         return 'Article Repository';
       case 'sections':
         return 'Desks & Beats';
-      case 'scheduler':
-        return 'Autonomous Scheduler';
       default:
         return 'Newsroom';
     }
@@ -80,13 +79,31 @@ export default function Header({
           </h1>
 
           {/* Minimal Live Status Indicator */}
-          <div className="hidden lg:flex items-center gap-1.5 pl-2.5 border-l border-slate-200 dark:border-slate-800 text-[11px] text-slate-400">
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenSystemHealth && currentUser?.role === 'EDITOR') {
+                onOpenSystemHealth();
+              }
+            }}
+            disabled={currentUser?.role !== 'EDITOR'}
+            className={`hidden lg:flex items-center gap-1.5 pl-2.5 border-l border-slate-200 dark:border-slate-800 text-[11px] text-slate-400 ${
+              currentUser?.role === 'EDITOR'
+                ? 'cursor-pointer hover:text-slate-700 dark:hover:text-slate-200 transition'
+                : 'cursor-default'
+            }`}
+            title={
+              currentUser?.role === 'EDITOR'
+                ? 'Worker & DB Synchronized • Click for System Diagnostics'
+                : 'Worker & DB Synchronized'
+            }
+          >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
             <span className="font-mono-code text-slate-400 dark:text-slate-500">{timeString}</span>
-          </div>
+          </button>
         </div>
       </div>
 

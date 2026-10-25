@@ -45,7 +45,6 @@ import AlertsView from './components/views/AlertsView';
 import CalendarView from './components/views/CalendarView';
 import ArticlesView from './components/views/ArticlesView';
 import SectionsView from './components/views/SectionsView';
-import SchedulerView from './components/views/SchedulerView';
 
 // Modals
 import AuthModal from './components/modals/AuthModal';
@@ -55,6 +54,7 @@ import BulkScheduleModal from './components/modals/BulkScheduleModal';
 import BulkUnpublishModal from './components/modals/BulkUnpublishModal';
 import ForkRevisionModal from './components/modals/ForkRevisionModal';
 import ArticleDetailModal from './components/modals/ArticleDetailModal';
+import SystemHealthModal from './components/modals/SystemHealthModal';
 import CommandPalette from './components/common/CommandPalette';
 import ShortcutsModal from './components/modals/ShortcutsModal';
 
@@ -113,6 +113,7 @@ export default function App() {
   // Command Palette & Keyboard Shortcuts
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [showSystemHealthModal, setShowSystemHealthModal] = useState(false);
 
   // Dashboard Data
   const [dashboardData, setDashboardData] = useState(null);
@@ -217,8 +218,10 @@ export default function App() {
         setActiveView('calendar');
       } else if (e.key.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey) {
         setActiveView('sections');
+      } else if (e.key.toLowerCase() === 'o' && !e.ctrlKey && !e.metaKey) {
+        setActiveView('alerts');
       } else if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey) {
-        setActiveView('scheduler');
+        setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
       }
     };
 
@@ -906,6 +909,7 @@ export default function App() {
         currentUser={currentUser}
         onOpenCreateStory={handleOpenCreateStoryModal}
         onSignOut={handleSignOut}
+        onOpenSystemHealth={() => setShowSystemHealthModal(true)}
       />
 
       {/* Main Layout Area */}
@@ -926,6 +930,7 @@ export default function App() {
           onOpenShortcuts={() => setShowShortcutsModal(true)}
           onNavigateToLanding={() => setActiveView('landing')}
           onSignOut={handleSignOut}
+          onOpenSystemHealth={() => setShowSystemHealthModal(true)}
         />
 
         {/* Global Toast Notification */}
@@ -1025,16 +1030,6 @@ export default function App() {
               onToggleArchiveSection={handleToggleArchiveSection}
               token={token}
               onToast={(msg) => setGlobalNotice({ message: msg, type: 'success' })}
-            />
-          )}
-
-          {activeView === 'scheduler' && (
-            <SchedulerView
-              schedulerStatus={schedulerStatus}
-              triggerCronLoading={triggerCronLoading}
-              triggerCronResult={triggerCronResult}
-              setTriggerCronResult={setTriggerCronResult}
-              onTriggerCycle={handleTriggerSchedulerCycle}
             />
           )}
         </main>
@@ -1144,12 +1139,24 @@ export default function App() {
         articles={articles}
         onOpenArticle={handleOpenArticle}
         onOpenStory={(article) => handleOpenArticle(article.id)}
+        onOpenSystemHealth={() => setShowSystemHealthModal(true)}
       />
 
       {/* Keyboard Shortcuts Guide Modal (?) */}
       <ShortcutsModal
         isOpen={showShortcutsModal}
         onClose={() => setShowShortcutsModal(false)}
+      />
+
+      {/* Production System Health & Telemetry Modal */}
+      <SystemHealthModal
+        isOpen={showSystemHealthModal}
+        onClose={() => setShowSystemHealthModal(false)}
+        schedulerStatus={schedulerStatus}
+        triggerCronLoading={triggerCronLoading}
+        triggerCronResult={triggerCronResult}
+        setTriggerCronResult={setTriggerCronResult}
+        onTriggerCycle={handleTriggerSchedulerCycle}
       />
     </div>
   );
