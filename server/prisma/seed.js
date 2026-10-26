@@ -9,12 +9,16 @@ async function main() {
   // 1. Clean slate in reverse dependency order
   console.log('[Seed] Purging all existing mock articles, revisions, timelines, and alert dismissals...');
   try {
+    // Drop immutable audit trigger so seed can reset table state
+    await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS trg_timeline_immutable ON timeline_events;');
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "timeline_events", "article_comments", "alert_dismissals", "article_revisions", "articles", "section_assignments", "sections", "users" CASCADE;'
     );
   } catch (truncateErr) {
-    console.log('[Seed] TRUNCATE fallback to trigger toggle:', truncateErr.message);
-    await prisma.$executeRawUnsafe('ALTER TABLE timeline_events DISABLE TRIGGER trg_timeline_immutable;');
+    console.log('[Seed] TRUNCATE fallback to deleteMany:', truncateErr.message);
+    try {
+      await prisma.$executeRawUnsafe('DROP TRIGGER IF EXISTS trg_timeline_immutable ON timeline_events;');
+    } catch (e) {}
     await prisma.alertDismissal.deleteMany();
     await prisma.articleComment.deleteMany();
     await prisma.timelineEvent.deleteMany();
@@ -24,7 +28,6 @@ async function main() {
     await prisma.sectionAssignment.deleteMany();
     await prisma.section.deleteMany();
     await prisma.user.deleteMany();
-    await prisma.$executeRawUnsafe('ALTER TABLE timeline_events ENABLE TRIGGER trg_timeline_immutable;');
   }
 
   // 2. Demo Users
@@ -507,6 +510,18 @@ International Seabed Authority delegates meeting in Kingston are preparing to in
   console.log('  Culture Reporter: elena.writer@dispatch.com (Elena Rostova)');
   console.log('  Password        : password123');
   console.log('----------------------------------------------------');
+
+  // Re-enable immutable audit trigger for production safety
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TRIGGER trg_timeline_immutable
+      BEFORE UPDATE OR DELETE ON timeline_events
+      FOR EACH ROW
+      EXECUTE FUNCTION prevent_timeline_mutation();
+    `);
+  } catch (trgErr) {
+    console.log('[Seed] Notice on trigger recreation:', trgErr.message);
+  }
 }
 
 main()
