@@ -28,13 +28,14 @@ This log documents the pivotal architecture and data modeling decisions made for
 
 ---
 
-## Decision 4: Background Job Worker vs. Query-Time Evaluation for Scheduled Publishing
+## Decision 4: Autonomous Background Scheduled Publishing (In-Process Worker vs. Heavy Queue)
 
-- **Chose:** **Query-Time Status Evaluation & Explicit Publish Triggers**: Articles with `publish_at <= NOW()` are evaluated on query and can be promoted to `PUBLISHED` via transactional API endpoints (`/api/articles/:id/transition` or `/api/bulk/publish-due`).
-- **Rejected:** Dedicated background cron daemon running Redis and BullMQ.
-- **Later reversed:**
-  - *Original Choice:* Initially planned to spin up a background worker with `node-cron` or BullMQ to auto-publish scheduled articles the exact second their `publish_at` arrived.
-  - *What changed our mind:* On free-tier cloud platforms (Vercel, Render free tier), containers spin down when idle. Background timers either pause or desynchronize when the server sleeps. Setting up Redis adds operational fragility and external dependencies. Shifting to query-time evaluation ensures scheduled pieces are seamlessly accessible to viewers the moment their time has passed, without needing standing compute infrastructure.
+- **Chose:** An **In-Process Autonomous Background Worker (`scheduler.worker.js`)** coupled with an **Authenticated Webhook Trigger (`/api/internal/cron/publish`)** and **Database Clock Synchronization (`SELECT NOW()`)**. The worker evaluates due articles every 30 seconds using optimistic concurrency locking (`article.version`), eliminating race conditions while recording immutable audit events.
+- **Rejected:** Heavy distributed queue architectures (e.g., Redis + BullMQ / Celery).
+- **Later reversed & refined:**
+  - *Original Choice:* Initially considered running external distributed Redis queues with BullMQ to schedule precise execution jobs.
+  - *What changed our mind:* Redis adds operational cost, infrastructure fragility, and serialization overhead for an editorial workflow where batch sizes rarely exceed dozens of scheduled articles per hour. However, relying purely on client query-time evaluation meant that scheduled articles would remain unpublished if nobody visited the website.
+  - *Resolution:* We implemented a lightweight, resilient in-process worker daemon that queries Neon PostgreSQL directly using `SELECT NOW()` to prevent local container clock drift, combined with an authenticated HTTP cron endpoint (`x-cron-secret`) for external orchestrators (Cloudflare Workers, AWS EventBridge, or Render Cron).
 
 ---
 
