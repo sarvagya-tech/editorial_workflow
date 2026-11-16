@@ -97,8 +97,24 @@ This log documents the pivotal architecture and data modeling decisions made for
 
 ## Decision 12: Dual-Layer State Model for Published Article Revisions
 
-- **Chose:** Decoupling article-level published availability from working revision lifecycle progression: when a replacement revision (e.g. Revision #2) is drafted on a published article, `articles.status` remains `PUBLISHED` (and `articles.publishedRevisionId` remains anchored to Revision #1), while Revision #2 progresses through `DRAFT` $\to$ `IN_REVIEW` $\to$ `APPROVED`. `articles.publishedRevisionId` and live active text shift only upon final publication of Revision #2.
+- **Chose:** Decoupling article-level published availability from working revision lifecycle progression: when a replacement revision (e.g. Revision #2) is drafted on a published article, `articles.status` remains `PUBLISHED` (and `articles.publishedRevisionId` remains anchored to Revision #1), while Revision #2 progresses through `DRAFT` → `IN_REVIEW` → `APPROVED`. `articles.publishedRevisionId` and live active text shift only upon final publication of Revision #2.
 - **Rejected:** Setting `articles.status` back to `IN_REVIEW`, which would unpublish the article and take it offline for public readers while a correction or follow-up was drafted.
 - **Why:** In high-traffic publications, live news coverage must remain continuously accessible while follow-up revisions undergo editorial review.
 
+---
 
+## Decision 13: Search Implementation — Prisma `contains` (ILIKE) vs. Native GIN Full-Text Search
+
+- **Chose:** Prisma's `{ contains: q, mode: 'insensitive' }` filter, which translates to a PostgreSQL `ILIKE '%term%'` query across `title`, `body`, and revision bodies.
+- **What exists in the schema:** A GIN index (`idx_articles_fts`) over `to_tsvector('english', title || ' ' || body)` was created in the migration SQL and is present in the database, but the runtime query does not use `@@` (tsvector match) operators, so the GIN index is not exercised.
+- **Trade-off:** `ILIKE '%term%'` causes a sequential scan on large tables and cannot rank results by relevance. A native `to_tsquery` search would use the GIN index, returning faster results at scale and supporting stemming/ranking. For the current dataset size this difference is imperceptible, but the GIN index provides no benefit until the query is updated to use `@@`.
+- **What was not done:** The search query was not migrated to `$queryRaw` with `to_tsquery` during this submission. This is an acknowledged gap — the GIN index is in place for a future migration, but claiming it is used today would be inaccurate.
+
+---
+
+## Decision 14: Render Free-Tier Deployment Trade-off for the Scheduled Publishing Worker
+
+- **Chose:** Deploying the backend on Render's free tier for cost-free evaluation hosting.
+- **Trade-off:** Render free-tier web services spin down after 15 minutes of inactivity and take 30–60 seconds to cold-start on the next request. During the sleep window, the in-process `scheduler.worker.js` daemon is also inactive. This means a scheduled article whose `publish_at` time passes while the server is asleep will **not be published at that exact moment**.
+- **Observable consequence:** Such articles will appear in the **Overdue Publication Alerts** view (because `publish_at < NOW()` and status is still `SCHEDULED`). The first incoming request after the server wakes will restart the worker, and the next 30-second polling tick will publish the overdue article automatically.
+- **In production:** This trade-off is eliminated by upgrading to a paid Render plan (persistent process) or by wiring the authenticated HTTP cron endpoint (`POST /api/internal/cron/publish`) to an always-on external scheduler such as GitHub Actions, Vercel Cron, or EasyCron, which can wake the server and trigger publishing on a fixed schedule regardless of organic traffic.

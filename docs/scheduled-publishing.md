@@ -74,7 +74,7 @@ Configure the following variables in `server/.env`:
 
 | Variable | Type | Default | Description |
 |---|---|---|---|
-| `CRON_SECRET` | string | `dispatch-internal-cron-secret-2026` | Secret key required to authenticate HTTP cron requests. |
+| `CRON_SECRET` | string | `your-cron-secret-here` | Secret key required to authenticate HTTP cron requests. |
 | `ENABLE_SCHEDULER_WORKER` | boolean | `true` | Set to `false` in serverless environments or during test suites to disable the in-process timer. |
 | `SCHEDULER_INTERVAL_MS` | integer | `30000` | Polling interval in milliseconds for the background worker (e.g. 30000 = 30 seconds). |
 | `SCHEDULER_BATCH_SIZE` | integer | `50` | Maximum number of due articles to process in a single worker cycle. |
@@ -99,7 +99,7 @@ Upon startup, the server initializes the background worker:
 You can manually trigger a publication cycle using `curl` or PowerShell:
 ```bash
 curl -X POST http://localhost:5000/api/internal/cron/publish \
-  -H "x-cron-secret: dispatch-internal-cron-secret-2026" \
+  -H "x-cron-secret: your-cron-secret-here" \
   -H "Content-Type: application/json"
 ```
 
@@ -161,7 +161,7 @@ jobs:
 Retrieve scheduler operational telemetry:
 ```bash
 curl -X GET http://localhost:5000/api/internal/cron/status \
-  -H "x-cron-secret: dispatch-internal-cron-secret-2026"
+  -H "x-cron-secret: your-cron-secret-here"
 ```
 Response:
 ```json
@@ -186,3 +186,4 @@ Response:
   "timestamp": "2026-10-24T00:25:05.000Z"
 }
 ```
+

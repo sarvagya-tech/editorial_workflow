@@ -16,7 +16,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CRON_SECRET
-        value: dispatch-internal-cron-secret-2026
+        sync: false
       - key: ENABLE_SCHEDULER_WORKER
         value: "true"
       - key: SCHEDULER_INTERVAL_MS

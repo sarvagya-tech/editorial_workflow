@@ -20,7 +20,7 @@ The application includes an instant **1-Click Demo User Switcher** in the top na
 | :--- | :--- | :--- | :--- |
 | **EDITOR** | `editor@dispatch.com` | `password123` | **Sarah Jenkins** (Managing Editor, Global Access across all Desks) |
 | **EDITOR** | `david.editor@dispatch.com` | `password123` | **David Zhao** (Senior Editor, Global Access across all Desks) |
-| **WRITER** | `writer@dispatch.com` | `password123` | **Maya Patel** (Reporter: Technology & Silicon, Politics Desks) |
+| **WRITER** | `writer@dispatch.com` | `password123` | **Maya Patel** (Reporter: Technology & Silicon, Politics & Civic Affairs, and Investigative Desks) |
 | **WRITER** | `james.writer@dispatch.com` | `password123` | **James Wilson** (Correspondent: Politics & Civic Affairs, Investigative) |
 | **WRITER** | `elena.writer@dispatch.com` | `password123` | **Elena Rostova** (Reporter: Culture & Modern Arts Desk Only) |
 
@@ -47,7 +47,7 @@ The application includes an instant **1-Click Demo User Switcher** in the top na
 | **3** | **Articles in Sections** | ✅ **Done** | Section boundary isolation, author attribution, and strict zero-disclosure 404s for unauthorized writer section queries. |
 | **4** | **Article Lifecycle & Rules** | ✅ **Done** | Complete state machine: `DRAFT` → `IN_REVIEW` → `APPROVED` → `SCHEDULED` → `PUBLISHED`. Non-bypassable transitions with editorial integrity rule blocking self-approvals. |
 | **5** | **Section Assignments** | ✅ **Done** | Normalized M:N join model (`SectionAssignment`), assigned-only writing permissions, and assignment privacy. |
-| **6** | **Search, Pagination & Calendar CSV** | ✅ **Done** | Full-text search across titles and body with GIN index, multi-param filtering, stable deterministic sorting, pagination metadata, and RFC-4180 CSV export with formula injection mitigation (CWE-1236). |
+| **6** | **Search, Pagination & Calendar CSV** | ✅ **Done** | Case-insensitive search across titles and body using Prisma `contains` (ILIKE), multi-param filtering, stable deterministic sorting, pagination metadata, and RFC-4180 CSV export with formula injection mitigation (CWE-1236). Note: a GIN tsvector index exists in the migration SQL but the search query currently uses ILIKE � the GIN index is not exercised at runtime. See `docs/decisions.md` Decision 13 for the trade-off. |
 | **7** | **Bulk Scheduling & Unpublishing** | ✅ **Done** | Atomic batch processing with per-article success/failure reporting, concurrency locks, and audit timeline tracking. |
 | **8** | **Editorial Dashboard & Analytics** | ✅ **Done** | Scoped live production metrics, Monday–Sunday UTC publication trend chart, status distributions, and active desk allocations. |
 | **9** | **Tamper-Proof Audit History** | ✅ **Done** | Append-only `timeline_events` with PostgreSQL engine trigger `trg_timeline_immutable` blocking `UPDATE` and `DELETE` at the database level. |
@@ -148,3 +148,6 @@ To review the full capabilities in under 3 minutes:
 1. **Inline Commentary Threads:** Currently, comments are logged at the article/revision level. Future iterations could add character-offset inline passage annotations.
 2. **Visual Diff Highlighting:** Revisions currently preserve historical snapshots in full. Adding a line-by-line visual diff renderer would enhance editorial review.
 3. **Public Expiring Fact-Checker Previews:** Pre-publication access currently requires system authentication. Signed tokenized preview links would allow external review.
+
+
+
